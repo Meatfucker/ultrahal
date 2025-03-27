@@ -14,8 +14,7 @@ class LlmChat(QWidget):
 
         # Left-side chat layout
         chat_layout = QVBoxLayout()
-        self.text_display = QTextEdit()
-        self.text_display.setReadOnly(True)
+        self.text_display = QTextEdit(readOnly=True)
         chat_layout.addWidget(self.text_display, stretch=5)
         self.text_input = QTextEdit()
         chat_layout.addWidget(self.text_input, stretch=1)

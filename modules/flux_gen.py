@@ -33,7 +33,7 @@ class FluxGen(QWidget):
         # Prompt input label and box
         self.prompt_label = QLabel("Prompt")
         config_layout.addWidget(self.prompt_label)
-        self.prompt_input = QTextEdit()
+        self.prompt_input = QTextEdit(acceptRichText=False)
         config_layout.addWidget(self.prompt_input)
         # Width layout containing label and input box
         width_layout = QHBoxLayout()
