@@ -10,7 +10,7 @@ from modules.flux_gen import FluxGen
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.avernus_client = AvernusClient("metatron")
+        self.avernus_client = AvernusClient("localhost")
         layout = QVBoxLayout()
 
         self.avernus_layout = QHBoxLayout()
@@ -40,6 +40,9 @@ class MainWindow(QWidget):
     def update_avernus_url(self):
         url = self.avernus_entry.text()
         self.avernus_client = AvernusClient(url)
+        self.tab1.avernus_client = self.avernus_client
+        self.tab2.avernus_client = self.avernus_client
+        self.tab3.avernus_client = self.avernus_client
 
 
 if __name__ == "__main__":

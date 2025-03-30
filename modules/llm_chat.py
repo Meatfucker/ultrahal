@@ -59,18 +59,20 @@ class LlmChat(QWidget):
         model_name = self.model_repo_input.text()
         if model_name == "":
             model_name = "Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4"
+
         if self.history is None:
             response = await self.avernus_client.llm_chat(input_text, model_name=model_name)
         else:
             gen_history = self.history.get("history", [])
             response = await self.avernus_client.llm_chat(input_text, messages=gen_history, model_name=model_name)
-        await self.add_history("user", input_text)
-        await self.add_history("assistant", response)
-        formatted_input = self.ansi_to_html(input_text)
-        formatted_response = self.ansi_to_html(response)
-        self.text_display.insertHtml(f"<br><b>User:</b> {formatted_input}<br>")
-        self.text_display.insertHtml(f"<br><b>Avernus:</b> {formatted_response}<br>")
-        self.text_input.clear()
+        if isinstance(response, str):
+            await self.add_history("user", input_text)
+            await self.add_history("assistant", response)
+            formatted_input = self.ansi_to_html(input_text)
+            formatted_response = self.ansi_to_html(response)
+            self.text_display.insertHtml(f"<br><b>User:</b> {formatted_input}<br>")
+            self.text_display.insertHtml(f"<br><b>Avernus:</b> {formatted_response}<br>")
+            self.text_input.clear()
 
     async def add_history(self, role, content):
         """Adds each message to the history."""
@@ -78,7 +80,7 @@ class LlmChat(QWidget):
             self.history = {"history": []}
         self.history["history"].append({"role": role, "content": content})
 
-    @staticmethod
+
     @staticmethod
     def ansi_to_html(text):
         """Converts ANSI plain text to HTML with preserved formatting."""
