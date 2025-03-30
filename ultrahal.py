@@ -10,7 +10,7 @@ from modules.flux_gen import FluxGen
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.avernus_client = AvernusClient("localhost")
+        self.avernus_client = AvernusClient("metatron")
         layout = QVBoxLayout()
 
         self.tabs = QTabWidget()
