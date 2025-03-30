@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget
+from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QPushButton, QLabel, QLineEdit
 import sys
 
 from modules.client import AvernusClient
@@ -13,6 +13,15 @@ class MainWindow(QWidget):
         self.avernus_client = AvernusClient("metatron")
         layout = QVBoxLayout()
 
+        self.avernus_layout = QHBoxLayout()
+        self.avernus_label = QLabel("Avernus URL:")
+        self.avernus_entry = QLineEdit()
+        self.avernus_button = QPushButton("Update URL")
+        self.avernus_button.clicked.connect(self.update_avernus_url)
+        self.avernus_layout.addWidget(self.avernus_label)
+        self.avernus_layout.addWidget(self.avernus_entry)
+        self.avernus_layout.addWidget(self.avernus_button)
+
         self.tabs = QTabWidget()
         self.tab1 = LlmChat(self.avernus_client)
         self.tab2 = SdxlGen(self.avernus_client)
@@ -22,10 +31,15 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab2, "SDXL Gen")
         self.tabs.addTab(self.tab3, "Flux Gen")
 
+        layout.addLayout(self.avernus_layout)
         layout.addWidget(self.tabs)
         self.setLayout(layout)
         self.setWindowTitle("UltraHal")
         self.resize(1020, 800)
+
+    def update_avernus_url(self):
+        url = self.avernus_entry.text()
+        self.avernus_client = AvernusClient(url)
 
 
 if __name__ == "__main__":
