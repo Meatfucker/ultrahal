@@ -2,7 +2,7 @@ import asyncio
 import base64
 import io
 import math
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QLabel, QLineEdit
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 from modules.client import AvernusClient
@@ -69,6 +69,8 @@ class SdxlGen(QWidget):
         batch_size_layout.addWidget(self.batch_size_label)
         batch_size_layout.addWidget(self.batch_size_input)
         config_layout.addLayout(batch_size_layout)
+        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
+        config_layout.addWidget(self.prompt_enhance_checkbox)
         # Submit button
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -148,6 +150,8 @@ class SdxlGen(QWidget):
             kwargs["steps"] = int(steps)
         if batch_size != "":
             kwargs["batch_size"] = int(batch_size)
+        if self.prompt_enhance_checkbox.isChecked():
+            prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
         base64_images = await self.avernus_client.sdxl_image(prompt, **kwargs)
         images = await self.base64_to_images(base64_images)
         await self.display_images(images)
