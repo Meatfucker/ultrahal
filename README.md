@@ -25,4 +25,6 @@ Run ultrahal.py and pray I didnt miss any requirements. If I did install them vi
 - Eventually figure out how to run these async calls without pyside6 losin its shit at me.
 - Add support for controlnets
 - Add support for inpainting
-- Add proper installer for windows and linux
+- Make pressing enter in the server url entry update the server.
+- Display current server
+- Make pressing enter on gen tabs press generate

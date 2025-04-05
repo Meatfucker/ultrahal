@@ -2,8 +2,9 @@ import asyncio
 import base64
 import io
 import math
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox
-from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
+                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog)
+from PySide6.QtGui import QPixmap, QContextMenuEvent
 from PySide6.QtCore import Qt
 from modules.client import AvernusClient
 
@@ -207,14 +208,18 @@ class SdxlGen(QWidget):
 class ClickablePixmapItem(QGraphicsPixmapItem):
     def __init__(self, pixmap, original_pixmap, parent=None):
         super().__init__(pixmap, parent)
-        self.is_full_screen = False  # Flag to track full-screen state
-        self.original_pos = None  # Store the original position of the image
-        self.original_size = pixmap.size()  # Store the original size of the image
+        self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
+        self.is_full_screen = False
+        self.original_pos = None
+        self.original_size = pixmap.size()
         self.original_pixmap = original_pixmap
 
     def mousePressEvent(self, event):
-        """Called when the pixmap item is clicked."""
-        self.toggle_full_screen()
+        if event.button() == Qt.LeftButton:
+            self.toggle_full_screen()
+        elif event.button() == Qt.RightButton:
+            self.show_context_menu(event.screenPos())
 
     def toggle_full_screen(self):
         """Toggle between full-screen and original view."""
@@ -240,3 +245,20 @@ class ClickablePixmapItem(QGraphicsPixmapItem):
 
             self.setZValue(1)  # Set the Z-order to be above the other images
             self.is_full_screen = True  # Set full-screen mode on
+
+    def show_context_menu(self, global_pos):
+        menu = QMenu()
+        save_action = menu.addAction("Save Image As...")
+        action = menu.exec(global_pos)
+        if action == save_action:
+            self.save_image_dialog()
+
+    def save_image_dialog(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save Image",
+            "image.png",
+            "Images (*.png *.jpg *.bmp)"
+        )
+        if file_path:
+            self.original_pixmap.save(file_path)
