@@ -2,8 +2,8 @@ import base64
 import io
 import math
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
-                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog)
-from PySide6.QtGui import QPixmap, QContextMenuEvent
+                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QComboBox)
+from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 from qasync import asyncSlot
 from modules.client import AvernusClient
@@ -16,7 +16,6 @@ class FluxGen(QWidget):
         self.scaled_images = []  # Store the scaled images
         # Main layout (horizontal)
         main_layout = QHBoxLayout()
-
         image_layout = QVBoxLayout()
         # Graphics View for Image Display
         self.graphics_view = QGraphicsView()
@@ -36,6 +35,10 @@ class FluxGen(QWidget):
         config_layout.addWidget(self.prompt_label)
         self.prompt_input = ShiftEnterTextEdit(on_shift_enter_callback=self.on_submit)
         config_layout.addWidget(self.prompt_input)
+        # Lora listbox
+        self.make_lora_list()
+        self.lora_list = QComboBox()
+        config_layout.addWidget(self.lora_list)
         # Width layout containing label and input box
         width_layout = QHBoxLayout()
         self.width_label = QLabel("Width:")
@@ -117,6 +120,16 @@ class FluxGen(QWidget):
         scene_rect = self.scene.itemsBoundingRect()
         self.graphics_view.fitInView(scene_rect, Qt.KeepAspectRatio)
 
+
+    @asyncSlot()
+    async def make_lora_list(self):
+        self.lora_list.clear()
+        self.lora_list.addItem("<None>")
+        loras = await self.avernus_client.list_flux_loras()
+        for lora in loras:
+            self.lora_list.addItem(lora)
+
+
     @asyncSlot()
     async def on_submit(self):
         self.submit_button.setText("Generating")
@@ -134,6 +147,7 @@ class FluxGen(QWidget):
         height = self.height_input.text()
         steps = self.steps_input.text()
         batch_size = self.batch_size_input.text()
+        lora_name = self.lora_list.currentText()
         kwargs = {}
         if width != "":
             kwargs["width"] = int(width)
@@ -143,6 +157,8 @@ class FluxGen(QWidget):
             kwargs["steps"] = int(steps)
         if batch_size != "":
             kwargs["batch_size"] = int(batch_size)
+        if lora_name != "<None>":
+            kwargs["lora_name"] = str(lora_name)
         if self.prompt_enhance_checkbox.isChecked():
             prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
         base64_images = await self.avernus_client.flux_image(prompt, **kwargs)

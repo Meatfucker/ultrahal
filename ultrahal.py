@@ -29,13 +29,13 @@ class MainWindow(QWidget):
         self.avernus_layout.addWidget(self.avernus_button)
 
         self.tabs = QTabWidget()
-        self.tab1 = LlmChat(self.avernus_client)
-        self.tab2 = SdxlGen(self.avernus_client)
-        self.tab3 = FluxGen(self.avernus_client)
+        self.llm_chat_tab = LlmChat(self.avernus_client)
+        self.sdxl_tab = SdxlGen(self.avernus_client)
+        self.flux_tab = FluxGen(self.avernus_client)
 
-        self.tabs.addTab(self.tab1, "LLM Chat")
-        self.tabs.addTab(self.tab2, "SDXL Gen")
-        self.tabs.addTab(self.tab3, "Flux Gen")
+        self.tabs.addTab(self.llm_chat_tab, "LLM Chat")
+        self.tabs.addTab(self.sdxl_tab, "SDXL Gen")
+        self.tabs.addTab(self.flux_tab, "Flux Gen")
 
         layout.addLayout(self.avernus_layout)
         layout.addWidget(self.tabs)
@@ -47,9 +47,12 @@ class MainWindow(QWidget):
         self.avernus_url = self.avernus_entry.text()
         self.avernus_client = AvernusClient(self.avernus_url)
         self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
-        self.tab1.avernus_client = self.avernus_client
-        self.tab2.avernus_client = self.avernus_client
-        self.tab3.avernus_client = self.avernus_client
+        self.llm_chat_tab.avernus_client = self.avernus_client
+        self.sdxl_tab.avernus_client = self.avernus_client
+        self.sdxl_tab.make_lora_list()
+        self.flux_tab.avernus_client = self.avernus_client
+        self.flux_tab.make_lora_list()
+
 
 
 if __name__ == "__main__":
