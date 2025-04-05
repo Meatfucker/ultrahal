@@ -34,7 +34,7 @@ class FluxGen(QWidget):
         # Prompt input label and box
         self.prompt_label = QLabel("Prompt")
         config_layout.addWidget(self.prompt_label)
-        self.prompt_input = QTextEdit(acceptRichText=False)
+        self.prompt_input = ShiftEnterTextEdit(on_shift_enter_callback=self.on_submit)
         config_layout.addWidget(self.prompt_input)
         # Width layout containing label and input box
         width_layout = QHBoxLayout()
@@ -253,3 +253,17 @@ class ClickablePixmapItem(QGraphicsPixmapItem):
         )
         if file_path:
             self.original_pixmap.save(file_path)
+
+
+class ShiftEnterTextEdit(QTextEdit):
+    def __init__(self, parent=None, on_shift_enter_callback=None):
+        super().__init__(parent, acceptRichText=False)
+        self.on_shift_enter_callback = on_shift_enter_callback
+
+    def keyPressEvent(self, event):
+        if (event.key() in (Qt.Key_Return, Qt.Key_Enter)) and (event.modifiers() & Qt.ShiftModifier):
+            if self.on_shift_enter_callback:
+                self.on_shift_enter_callback()
+        else:
+            super().keyPressEvent(event)
+

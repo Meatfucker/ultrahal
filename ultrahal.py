@@ -10,16 +10,20 @@ from modules.flux_gen import FluxGen
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.avernus_client = AvernusClient("localhost")
+        self.avernus_url = "localhost"
+        self.avernus_client = AvernusClient(self.avernus_url)
         layout = QVBoxLayout()
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_label = QLabel("Avernus URL:")
         self.avernus_entry = QLineEdit()
+        self.avernus_entry.returnPressed.connect(self.update_avernus_url)
+        self.avernus_current_server = QLabel(f"Current Server: {self.avernus_url}")
         self.avernus_button = QPushButton("Update URL")
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.avernus_layout.addWidget(self.avernus_label)
         self.avernus_layout.addWidget(self.avernus_entry)
+        self.avernus_layout.addWidget(self.avernus_current_server)
         self.avernus_layout.addWidget(self.avernus_button)
 
         self.tabs = QTabWidget()
@@ -38,8 +42,9 @@ class MainWindow(QWidget):
         self.resize(1020, 800)
 
     def update_avernus_url(self):
-        url = self.avernus_entry.text()
-        self.avernus_client = AvernusClient(url)
+        self.avernus_url = self.avernus_entry.text()
+        self.avernus_client = AvernusClient(self.avernus_url)
+        self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
         self.tab1.avernus_client = self.avernus_client
         self.tab2.avernus_client = self.avernus_client
         self.tab3.avernus_client = self.avernus_client

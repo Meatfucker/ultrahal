@@ -3,6 +3,9 @@ import html
 from loguru import logger
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QLineEdit
 
+from modules.sdxl_gen import ShiftEnterTextEdit
+
+
 class LlmChat(QWidget):
     def __init__(self, avernus_client):
         super().__init__()
@@ -16,7 +19,7 @@ class LlmChat(QWidget):
         chat_layout = QVBoxLayout()
         self.text_display = QTextEdit(readOnly=True)
         chat_layout.addWidget(self.text_display, stretch=5)
-        self.text_input = QTextEdit()
+        self.text_input = ShiftEnterTextEdit(on_shift_enter_callback=self.on_submit)
         chat_layout.addWidget(self.text_input, stretch=1)
         main_layout.addLayout(chat_layout, stretch=3)  # Left section
 
@@ -86,4 +89,16 @@ class LlmChat(QWidget):
         """Converts ANSI plain text to HTML with preserved formatting."""
         text = html.escape(text)  # Escape special HTML characters
         return f"<pre>{text}</pre>"  # Wrap in <pre> to preserve formatting
+
+    class ShiftEnterTextEdit(QTextEdit):
+        def __init__(self, parent=None, on_shift_enter_callback=None):
+            super().__init__(parent, acceptRichText=False)
+            self.on_shift_enter_callback = on_shift_enter_callback
+
+        def keyPressEvent(self, event):
+            if (event.key() in (Qt.Key_Return, Qt.Key_Enter)) and (event.modifiers() & Qt.ShiftModifier):
+                if self.on_shift_enter_callback:
+                    self.on_shift_enter_callback()
+            else:
+                super().keyPressEvent(event)
 
