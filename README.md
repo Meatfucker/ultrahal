@@ -17,8 +17,6 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 - Lots, lol
 - Add lora support for image models
-- Provide feedback something is generating
-- Eventually figure out how to run these async calls without pyside6 losin its shit at me.
 - Add support for controlnets
 - Add support for inpainting
 - Create and add program icon

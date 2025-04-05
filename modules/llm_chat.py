@@ -1,9 +1,7 @@
-import asyncio
 import html
-from loguru import logger
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QLineEdit
-
-from modules.sdxl_gen import ShiftEnterTextEdit
+from PySide6.QtCore import Qt
+from qasync import asyncSlot
 
 
 class LlmChat(QWidget):
@@ -48,14 +46,15 @@ class LlmChat(QWidget):
         self.history = None
         self.text_display.clear()
 
-    def on_submit(self):
-        """Wrapper to call the async function properly."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self.generate())
-        finally:
-            loop.close()
+    @asyncSlot()
+    async def on_submit(self):
+        self.submit_button.setText("Generating")
+        self.submit_button.setDisabled(True)
+        self.text_input.setDisabled(True)
+        await self.generate()
+        self.submit_button.setText("Submit")
+        self.submit_button.setDisabled(False)
+        self.text_input.setDisabled(False)
 
     async def generate(self):
         input_text = self.text_input.toPlainText()
@@ -90,15 +89,15 @@ class LlmChat(QWidget):
         text = html.escape(text)  # Escape special HTML characters
         return f"<pre>{text}</pre>"  # Wrap in <pre> to preserve formatting
 
-    class ShiftEnterTextEdit(QTextEdit):
-        def __init__(self, parent=None, on_shift_enter_callback=None):
-            super().__init__(parent, acceptRichText=False)
-            self.on_shift_enter_callback = on_shift_enter_callback
+class ShiftEnterTextEdit(QTextEdit):
+    def __init__(self, parent=None, on_shift_enter_callback=None):
+        super().__init__(parent, acceptRichText=False)
+        self.on_shift_enter_callback = on_shift_enter_callback
 
-        def keyPressEvent(self, event):
-            if (event.key() in (Qt.Key_Return, Qt.Key_Enter)) and (event.modifiers() & Qt.ShiftModifier):
-                if self.on_shift_enter_callback:
-                    self.on_shift_enter_callback()
-            else:
-                super().keyPressEvent(event)
+    def keyPressEvent(self, event):
+        if (event.key() in (Qt.Key_Return, Qt.Key_Enter)) and (event.modifiers() & Qt.ShiftModifier):
+            if self.on_shift_enter_callback:
+                self.on_shift_enter_callback()
+        else:
+            super().keyPressEvent(event)
 

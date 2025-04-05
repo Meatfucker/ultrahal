@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QPushButton, QLabel, QLineEdit
 import sys
+import asyncio
+from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QPushButton, QLabel, QLineEdit
+from qasync import QEventLoop
 
 from modules.client import AvernusClient
 from modules.llm_chat import LlmChat
@@ -52,6 +54,11 @@ class MainWindow(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
     window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+
+    with loop:
+        loop.run_forever()

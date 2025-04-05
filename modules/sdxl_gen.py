@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import io
 import math
@@ -6,6 +5,7 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPu
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog)
 from PySide6.QtGui import QPixmap, QContextMenuEvent
 from PySide6.QtCore import Qt
+from qasync import asyncSlot
 from modules.client import AvernusClient
 
 class SdxlGen(QWidget):
@@ -123,14 +123,17 @@ class SdxlGen(QWidget):
         scene_rect = self.scene.itemsBoundingRect()
         self.graphics_view.fitInView(scene_rect, Qt.KeepAspectRatio)
 
-    def on_submit(self):
-        """Wrapper to call the async generate function properly."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self.generate())
-        finally:
-            loop.close()
+    @asyncSlot()
+    async def on_submit(self):
+        self.submit_button.setText("Generating")
+        self.submit_button.setDisabled(True)
+        self.prompt_input.setDisabled(True)
+        self.negative_prompt_input.setDisabled(True)
+        await self.generate()
+        self.submit_button.setText("Submit")
+        self.submit_button.setDisabled(False)
+        self.prompt_input.setDisabled(False)
+        self.negative_prompt_input.setDisabled(False)
 
     async def generate(self):
         """API call to generate the images and convert them from base64"""
