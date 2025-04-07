@@ -20,4 +20,3 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add support for image to image
 - Add support for controlnets
 - Add support for inpainting
-- Create and add program icon
