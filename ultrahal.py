@@ -1,5 +1,6 @@
 import sys
 import asyncio
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QPushButton, QLabel, QLineEdit
 from qasync import QEventLoop
 
@@ -54,9 +55,12 @@ class MainWindow(QWidget):
         self.flux_tab.make_lora_list()
 
 
-
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
+    icon = QIcon("assets/icon.png")
+    app.setStyle('Fusion')
+    app.setWindowIcon(icon)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
