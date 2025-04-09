@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPu
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QComboBox)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
+from PIL import Image
 from qasync import asyncSlot
 from modules.client import AvernusClient
 
@@ -27,7 +28,7 @@ class FluxGen(QWidget):
         self.pixmap_item = QGraphicsPixmapItem(self.default_image)
         self.scene.addItem(self.pixmap_item)
         image_layout.addWidget(self.graphics_view, stretch=5)
-        main_layout.addLayout(image_layout, stretch=3)  # Left section
+        main_layout.addLayout(image_layout, stretch=5)  # Left section
 
         config_layout = QVBoxLayout()
         # Prompt input label and box
@@ -35,6 +36,26 @@ class FluxGen(QWidget):
         config_layout.addWidget(self.prompt_label)
         self.prompt_input = ShiftEnterTextEdit(on_shift_enter_callback=self.on_submit)
         config_layout.addWidget(self.prompt_input)
+
+        # i2i input image
+        self.enable_i2i_checkbox = QCheckBox("Enable Image input")
+        i2i_strength_layout = QHBoxLayout()
+        self.i2i_load_image_button = QPushButton("Load")
+        self.i2i_load_image_button.clicked.connect(self.load_i2i_image)
+        self.i2i_strength_label = QLabel("Strength")
+        self.i2i_strength_input = QLineEdit(placeholderText="0.7")
+        i2i_strength_layout.addWidget(self.i2i_load_image_button)
+        i2i_strength_layout.addWidget(self.i2i_strength_label)
+        i2i_strength_layout.addWidget(self.i2i_strength_input)
+        self.i2i_input_image = QPixmap("assets/chili.png").scaledToWidth(250)
+        self.i2i_input_image_label = QLabel()
+        self.i2i_input_image_label.setPixmap(self.i2i_input_image)
+        config_layout.addWidget(self.enable_i2i_checkbox)
+        config_layout.addLayout(i2i_strength_layout)
+        config_layout.addWidget(self.i2i_input_image_label)
+
+
+
         # Lora listbox
         self.make_lora_list()
         self.lora_list = QComboBox()
@@ -42,28 +63,28 @@ class FluxGen(QWidget):
         # Width layout containing label and input box
         width_layout = QHBoxLayout()
         self.width_label = QLabel("Width:")
-        self.width_input = QLineEdit()
+        self.width_input = QLineEdit(placeholderText="1024")
         width_layout.addWidget(self.width_label)
         width_layout.addWidget(self.width_input)
         config_layout.addLayout(width_layout)
         # Height layout containing label and input box
         height_layout = QHBoxLayout()
         self.height_label = QLabel("Height:")
-        self.height_input = QLineEdit()
+        self.height_input = QLineEdit(placeholderText="1024")
         height_layout.addWidget(self.height_label)
         height_layout.addWidget(self.height_input)
         config_layout.addLayout(height_layout)
         # Steps layout containing label and input box
         steps_layout = QHBoxLayout()
         self.steps_label = QLabel("Steps:")
-        self.steps_input = QLineEdit()
+        self.steps_input = QLineEdit(placeholderText="30")
         steps_layout.addWidget(self.steps_label)
         steps_layout.addWidget(self.steps_input)
         config_layout.addLayout(steps_layout)
         # Batch size layout containing label and input box
         batch_size_layout = QHBoxLayout()
         self.batch_size_label = QLabel("Batch Size:")
-        self.batch_size_input = QLineEdit()
+        self.batch_size_input = QLineEdit(placeholderText="4")
         batch_size_layout.addWidget(self.batch_size_label)
         batch_size_layout.addWidget(self.batch_size_input)
         config_layout.addLayout(batch_size_layout)
@@ -73,14 +94,18 @@ class FluxGen(QWidget):
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         config_layout.addWidget(self.submit_button)
-        main_layout.addLayout(config_layout, stretch=1)  # Left section
-
+        main_layout.addLayout(config_layout, stretch=1)
 
 
         self.setLayout(main_layout)
 
         # Ensure the image fits initially
         self.update_image_fit()
+
+    def load_i2i_image(self):
+        self.image_file_path = QFileDialog.getOpenFileName(self, str("Open Image"), "~", str("Image Files (*.png *.jpg)"))[0]
+        self.i2i_input_image = QPixmap(self.image_file_path).scaledToWidth(250)
+        self.i2i_input_image_label.setPixmap(self.i2i_input_image)
 
 
     def resizeEvent(self, event):
@@ -148,6 +173,7 @@ class FluxGen(QWidget):
         steps = self.steps_input.text()
         batch_size = self.batch_size_input.text()
         lora_name = self.lora_list.currentText()
+        strength = self.i2i_strength_input.text()
         kwargs = {}
         if width != "":
             kwargs["width"] = int(width)
@@ -159,6 +185,11 @@ class FluxGen(QWidget):
             kwargs["batch_size"] = int(batch_size)
         if lora_name != "<None>":
             kwargs["lora_name"] = str(lora_name)
+        if self.enable_i2i_checkbox.isChecked():
+            image = self.image_to_base64(self.image_file_path)
+            kwargs["image"] = str(image)
+            if strength != "":
+                kwargs["strength"] = float(strength)
         if self.prompt_enhance_checkbox.isChecked():
             prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
         base64_images = await self.avernus_client.flux_image(prompt, **kwargs)
@@ -211,6 +242,13 @@ class FluxGen(QWidget):
             image_files.append(img_file)
 
         return image_files
+
+    @staticmethod
+    def image_to_base64(image_path):
+        image = Image.open(image_path)
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 
 class ClickablePixmapItem(QGraphicsPixmapItem):
