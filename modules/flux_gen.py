@@ -177,8 +177,12 @@ class FluxGen(QWidget):
         kwargs = {}
         if width != "":
             kwargs["width"] = int(width)
+        else:
+            kwargs["width"] = 1024
         if height != "":
             kwargs["height"] = int(height)
+        else:
+            kwargs["height"] = 1024
         if steps != "":
             kwargs["steps"] = int(steps)
         if batch_size != "":
@@ -186,7 +190,7 @@ class FluxGen(QWidget):
         if lora_name != "<None>":
             kwargs["lora_name"] = str(lora_name)
         if self.enable_i2i_checkbox.isChecked():
-            image = self.image_to_base64(self.image_file_path)
+            image = self.image_to_base64(self.image_file_path, kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if strength != "":
                 kwargs["strength"] = float(strength)
@@ -244,8 +248,10 @@ class FluxGen(QWidget):
         return image_files
 
     @staticmethod
-    def image_to_base64(image_path):
+    def image_to_base64(image_path, width, height):
         image = Image.open(image_path)
+        image = image.convert("RGB")
+        image = image.resize((width, height))
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
