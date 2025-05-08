@@ -19,4 +19,3 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add model selection
 - Add support for controlnets
 - Add support for inpainting
-- Add ability to right click and copy the image into the clipboard

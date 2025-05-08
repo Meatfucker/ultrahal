@@ -1,4 +1,3 @@
-import html
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QLineEdit
 from PySide6.QtCore import Qt
 from qasync import asyncSlot
@@ -16,6 +15,7 @@ class LlmChat(QWidget):
         # Left-side chat layout
         chat_layout = QVBoxLayout()
         self.text_display = QTextEdit(readOnly=True)
+        self.text_display.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         chat_layout.addWidget(self.text_display, stretch=5)
         self.text_input = ShiftEnterTextEdit(on_shift_enter_callback=self.on_submit)
         chat_layout.addWidget(self.text_input, stretch=1)
@@ -70,10 +70,16 @@ class LlmChat(QWidget):
         if isinstance(response, str):
             await self.add_history("user", input_text)
             await self.add_history("assistant", response)
-            formatted_input = self.ansi_to_html(input_text)
-            formatted_response = self.ansi_to_html(response)
-            self.text_display.insertHtml(f"<br><b>User:</b> {formatted_input}<br>")
-            self.text_display.insertHtml(f"<br><b>Avernus:</b> {formatted_response}<br>")
+            # formatted_input = self.ansi_to_html(input_text)
+            # formatted_response = self.ansi_to_html(response)
+            # self.text_display.insertHtml(f"<br><b>User:</b> {formatted_input}<br>")
+            # self.text_display.insertHtml(f"<br><b>Avernus:</b> {formatted_response}<br>")
+            font = self.text_display.currentFont()
+            font.setBold(True)
+            self.text_display.insertPlainText("User: ")
+            font.setBold(False)
+            self.text_display.insertPlainText(f"{input_text}\n\r")
+            self.text_display.insertPlainText(f"Assistant: {response}\n\r")
             self.text_input.clear()
 
     async def add_history(self, role, content):
@@ -81,13 +87,6 @@ class LlmChat(QWidget):
         if self.history is None:
             self.history = {"history": []}
         self.history["history"].append({"role": role, "content": content})
-
-
-    @staticmethod
-    def ansi_to_html(text):
-        """Converts ANSI plain text to HTML with preserved formatting."""
-        text = html.escape(text)  # Escape special HTML characters
-        return f"<pre>{text}</pre>"  # Wrap in <pre> to preserve formatting
 
 class ShiftEnterTextEdit(QTextEdit):
     def __init__(self, parent=None, on_shift_enter_callback=None):
