@@ -19,3 +19,5 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add model selection
 - Add support for controlnets
 - Add support for inpainting
+- fix tiling issue at some column counts
+- add queue

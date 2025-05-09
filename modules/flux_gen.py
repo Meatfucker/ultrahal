@@ -1,8 +1,8 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QCheckBox, QComboBox
 from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import  QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
 from modules.client import AvernusClient
-from modules.ui_widgets import ImageGalleryViewer, ImageInputBox, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
 class Flux(QWidget):
@@ -10,7 +10,7 @@ class Flux(QWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
 
-        self.gallery = ImageGalleryViewer()
+        self.gallery = ImageGallery()
         self.prompt_label = ParagraphInputBox("Prompt")
         self.i2i_image_label = ImageInputBox(self,"assets/chili.png", 250)
         self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
@@ -27,7 +27,7 @@ class Flux(QWidget):
         self.config_layout = QVBoxLayout()
         self.main_layout = QHBoxLayout()
 
-        self.image_layout.addWidget(self.gallery, stretch=5)
+        self.image_layout.addLayout(self.gallery, stretch=5)
         self.config_layout.addLayout(self.prompt_label)
         self.config_layout.addLayout(self.i2i_image_label)
         self.config_layout.addLayout(self.i2i_strength_label)
@@ -41,8 +41,6 @@ class Flux(QWidget):
         self.main_layout.addLayout(self.image_layout, stretch=5)  # Left section
         self.main_layout.addLayout(self.config_layout, stretch=1)
         self.setLayout(self.main_layout)
-
-        self.make_lora_list()
 
     @asyncSlot()
     async def on_submit(self):
@@ -64,6 +62,7 @@ class Flux(QWidget):
         batch_size = self.batch_size_label.input.text()
         lora_name = self.lora_list.currentText()
         strength = self.i2i_strength_label.input.text()
+        print(f"Flux: {prompt}, {width}, {height}, {steps}, {batch_size}, {lora_name}, {strength}")
 
         kwargs = {}
         if steps != "": kwargs["steps"] = int(steps)
@@ -94,12 +93,13 @@ class Flux(QWidget):
             print(f"Flux EXCEPTION: {e}")
 
     async def display_images(self, images):
-        #self.gallery.gallery.clear()
+        if self.gallery.clear_gallery_checkbox.isChecked():
+            self.gallery.gallery.gallery.clear()
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.add_pixmap(pixmap)
-        self.gallery.tile_images()
+            self.gallery.gallery.add_pixmap(pixmap)
+        self.gallery.gallery.tile_images()
         self.gallery.update()
 
     @asyncSlot()

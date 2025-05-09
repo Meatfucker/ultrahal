@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
-                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog)
+                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
@@ -52,11 +52,30 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if file_path:
             self.original_pixmap.save(file_path)
 
-
-class ImageGalleryViewer(QGraphicsView):
+class ImageGallery(QVBoxLayout):
     def __init__(self):
         super().__init__()
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.column_slider = QSlider(Qt.Horizontal)
+        self.column_slider.setMinimum(1)
+        self.column_slider.setMaximum(10)
+        self.column_slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
+        self.column_slider.setTickInterval(1)
+        self.column_slider.setValue(2)
+        self.clear_gallery_checkbox = QCheckBox("Clear Gallery")
+        self.gallery = ImageGalleryViewer(self)
+        self.column_slider.valueChanged.connect(self.gallery.tile_images)
+
+        config_layout = QHBoxLayout()
+        config_layout.addWidget(self.column_slider)
+        config_layout.addWidget(self.clear_gallery_checkbox)
+        self.addLayout(config_layout)
+        self.addWidget(self.gallery)
+
+
+class ImageGalleryViewer(QGraphicsView):
+    def __init__(self, top_layout):
+        super().__init__()
+        self.top_layout = top_layout
         self.gallery = QGraphicsScene()
         self.full_image_view = QGraphicsScene()
         self.setScene(self.gallery)
@@ -71,9 +90,8 @@ class ImageGalleryViewer(QGraphicsView):
         cur_x = 0
         cur_y = 0
         image_height = 0
-        columns = 3
         width = self.viewport().width()
-        tile_width = width / columns
+        tile_width = width / self.top_layout.column_slider.value()
         for image in self.gallery.items():
             scaled_pixmap = image.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
             if scaled_pixmap.size().height() > image_height:
@@ -82,7 +100,7 @@ class ImageGalleryViewer(QGraphicsView):
             scaled_pixmap = image.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
             image.setPixmap(scaled_pixmap)
             image.setPos(cur_x, cur_y)
-            if cur_x + tile_width == width:
+            if cur_x + tile_width >= width:
                 cur_y = cur_y + image_height
                 cur_x = 0
             else:
@@ -131,8 +149,8 @@ class ParagraphInputBox(QVBoxLayout):
         self.addWidget(self.input)
 
 class SingleLineInputBox(QHBoxLayout):
-    def __init__(self, label, placeholder_text=None, parent=None):
-        super().__init__(parent)
+    def __init__(self, label, placeholder_text=None):
+        super().__init__()
         self.label = QLabel(label)
         if placeholder_text:
             self.input = QLineEdit(placeholderText=placeholder_text)

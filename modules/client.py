@@ -1,5 +1,5 @@
 import httpx
-from loguru import logger
+
 
 class AvernusClient:
     """This is the client for the avernus API server"""
@@ -19,10 +19,10 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json().get("response", "")
             else:
-                logger.info(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
+                print(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
-            logger.info(f"EXCEPTION ERROR: {e}")
+            print(f"EXCEPTION ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def multimodal_llm_chat(self, prompt, model_name=None, messages=None):
@@ -36,10 +36,10 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                logger.info(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
+                print(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
-            logger.info(f"EXCEPTION ERROR: {e}")
+            print(f"EXCEPTION ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def sdxl_image(self, prompt, image=None, negative_prompt=None, model_name=None, lora_name=None, width=None, height=None,
@@ -62,9 +62,9 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json().get("images", [])
             else:
-                logger.info(f"ERROR: {response.status_code}")
+                print(f"ERROR: {response.status_code}")
         except Exception as e:
-            logger.info(f"ERROR: {e}")
+            print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def flux_image(self, prompt, image=None, model_name=None, lora_name=None, width=None, height=None, steps=None,
@@ -86,9 +86,9 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json().get("images", [])
             else:
-                logger.info(f"ERROR: {response.status_code}")
+                print(f"ERROR: {response.status_code}")
         except Exception as e:
-            logger.info(f"ERROR: {e}")
+            print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def list_sdxl_loras(self):
@@ -101,10 +101,10 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json().get("loras", [])
             else:
-                logger.info(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
+                print(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
-            logger.error(f"list_sdxl_loras ERROR: {e}")
+            print(f"list_sdxl_loras ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def list_flux_loras(self):
@@ -117,10 +117,10 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json().get("loras", [])
             else:
-                logger.info(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
+                print(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
-            logger.error(f"list_flux_loras ERROR: {e}")
+            print(f"list_flux_loras ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def check_status(self):
@@ -133,8 +133,8 @@ class AvernusClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                logger.info(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
+                print(f"STATUS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
-            logger.error(f"status ERROR: {e}")
+            print(f"status ERROR: {e}")
             return {"ERROR": str(e)}
