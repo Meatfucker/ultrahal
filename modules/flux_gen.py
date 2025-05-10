@@ -12,7 +12,7 @@ class Flux(QWidget):
 
         self.gallery = ImageGallery()
         self.prompt_label = ParagraphInputBox("Prompt")
-        self.i2i_image_label = ImageInputBox(self,"assets/chili.png", 250)
+        self.i2i_image_label = ImageInputBox(self,"assets/chili.png")
         self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
         self.lora_list = QComboBox()
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")

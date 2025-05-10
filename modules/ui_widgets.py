@@ -111,34 +111,61 @@ class ImageGalleryViewer(QGraphicsView):
         super().resizeEvent(event)
         self.tile_images()  # Fit the image to the window size
 
+class ScalingImageView(QGraphicsView):
+    def __init__(self):
+        super().__init__()
+        self.gallery = QGraphicsScene()
+        self.setScene(self.gallery)
+        self.default_image = QPixmap("assets/chili.png")
+        self.original_image = self.default_image
+        self.add_pixmap(self.default_image)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def add_pixmap(self, pixmap):
+        self.gallery.clear()
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.original_image = pixmap
+        self.gallery.addItem(pixmap_item)
+        self.resize_image()
+
+    def resize_image(self):
+        width = self.viewport().width()
+        for image in self.gallery.items():
+            scaled_pixmap = self.original_image.scaledToWidth(width, Qt.SmoothTransformation)
+            image.setPixmap(scaled_pixmap)
+            image.setPos(0, 0)
+
+    def resizeEvent(self, event):
+        """Resize event to ensure the images fit within the view and re-tile them."""
+        super().resizeEvent(event)
+        self.resize_image()  # Fit the image to the window size
 
 class ImageInputBox(QHBoxLayout):
-    def __init__(self, source_widget, default_image_path="assets/chili.png", width=250):
+    def __init__(self, source_widget, default_image_path="assets/chili.png"):
         super().__init__()
         self.source_widget = source_widget
         self.default_image_path = default_image_path
         self.image_file_path = None
-        self.width = width
 
         self.enable_checkbox = QCheckBox("Enable Image input")
         self.load_image_button = QPushButton("Load")
         self.load_image_button.clicked.connect(self.load_image)
-        self.input_image = QPixmap(self.default_image_path).scaledToWidth(width)
-        self.input_image_label = QLabel()
-        self.input_image_label.setPixmap(self.input_image)
+        self.image_view = ScalingImageView()
 
         self.image_layout = QVBoxLayout()
         self.enable_layout = QHBoxLayout()
         self.enable_layout.addWidget(self.enable_checkbox)
         self.enable_layout.addWidget(self.load_image_button)
         self.image_layout.addLayout(self.enable_layout)
-        self.image_layout.addWidget(self.input_image_label)
+        self.image_layout.addWidget(self.image_view)
         self.addLayout(self.image_layout)
 
     def load_image(self):
         self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg)"))[0]
-        self.input_image = QPixmap(self.image_file_path).scaledToWidth(self.width)
-        self.input_image_label.setPixmap(self.input_image)
+        self.input_image = QPixmap(self.image_file_path)
+        self.image_view.add_pixmap(self.input_image)
+
 
 class ParagraphInputBox(QVBoxLayout):
     def __init__(self, label):
