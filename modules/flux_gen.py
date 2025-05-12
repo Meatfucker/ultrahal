@@ -1,7 +1,7 @@
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
-from modules.client import AvernusClient
+from modules.avernus_client import AvernusClient
 from modules.ui_widgets import ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
@@ -12,7 +12,7 @@ class Flux(QWidget):
 
         self.gallery = ImageGallery()
         self.prompt_label = ParagraphInputBox("Prompt")
-        self.i2i_image_label = ImageInputBox(self,"assets/chili.png")
+        self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
         self.lora_list = QComboBox()
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
@@ -37,7 +37,7 @@ class Flux(QWidget):
         self.config_layout.addLayout(self.steps_label)
         self.config_layout.addLayout(self.batch_size_label)
         self.config_layout.addWidget(self.prompt_enhance_checkbox)
-        self.config_layout.addWidget(self.submit_button)
+        self.image_layout.addWidget(self.submit_button)
         self.main_layout.addLayout(self.image_layout, stretch=5)  # Left section
         self.main_layout.addLayout(self.config_layout, stretch=1)
         self.setLayout(self.main_layout)

@@ -17,6 +17,7 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 - Lots, lol
 - Add model selection
-- Add support for controlnets
 - Add support for inpainting
 - add queue
+- add send to ... to gallery images
+- add flux controlnet and ipadapter support

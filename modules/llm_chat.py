@@ -26,9 +26,10 @@ class LlmChat(QWidget):
         main_layout.addLayout(config_layout, stretch=1)
         chat_layout.addWidget(self.text_display, stretch=5)
         chat_layout.addWidget(self.text_input, stretch=1)
+        chat_layout.addWidget(self.submit_button)
         config_layout.addLayout(self.model_repo_label)
         config_layout.addWidget(self.clear_history_button, stretch=1)
-        config_layout.addWidget(self.submit_button)
+
         self.setLayout(main_layout)
 
     def clear_history(self):

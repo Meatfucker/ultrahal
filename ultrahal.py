@@ -3,7 +3,7 @@ import asyncio
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
 from qasync import QEventLoop, asyncSlot
-from modules.client import AvernusClient
+from modules.avernus_client import AvernusClient
 from modules.console import Console
 from modules.flux_gen import Flux
 from modules.llm_chat import LlmChat
@@ -57,6 +57,7 @@ class MainWindow(QWidget):
         status = await self.avernus_client.check_status()
         print(status)
         await self.sdxl_tab.make_lora_list()
+        await self.sdxl_tab.make_controlnet_list()
         await self.flux_tab.make_lora_list()
 
         

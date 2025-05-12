@@ -142,13 +142,13 @@ class ScalingImageView(QGraphicsView):
         self.resize_image()  # Fit the image to the window size
 
 class ImageInputBox(QHBoxLayout):
-    def __init__(self, source_widget, default_image_path="assets/chili.png"):
+    def __init__(self, source_widget, name="", default_image_path="assets/chili.png"):
         super().__init__()
         self.source_widget = source_widget
         self.default_image_path = default_image_path
         self.image_file_path = None
 
-        self.enable_checkbox = QCheckBox("Enable Image input")
+        self.enable_checkbox = QCheckBox(f"Enable {name} input")
         self.load_image_button = QPushButton("Load")
         self.load_image_button.clicked.connect(self.load_image)
         self.image_view = ScalingImageView()

@@ -1,7 +1,7 @@
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
-from modules.client import AvernusClient
+from modules.avernus_client import AvernusClient
 from modules.ui_widgets import ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
@@ -11,37 +11,50 @@ class Sdxl(QWidget):
         self.avernus_client: AvernusClient = avernus_client
 
         self.gallery = ImageGallery()
+        self.submit_button = QPushButton("Submit")
+        self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
-        self.i2i_image_label = ImageInputBox(self,"assets/chili.png")
-        self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
         self.lora_list = QComboBox()
+        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
-        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
-        self.submit_button = QPushButton("Submit")
-        self.submit_button.clicked.connect(self.on_submit)
+        self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
+        self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
+        self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
+        self.ipadapter_strength_label = SingleLineInputBox("IP Adapter Strength", placeholder_text="0.6")
+        self.controlnet_image_label = ImageInputBox(self, "Controlnet", "assets/chili.png")
+        self.controlnet_list = QComboBox()
+        self.controlnet_conditioning_scale = SingleLineInputBox("Controlnet Conditioning Scale", placeholder_text="0.5")
 
         self.image_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
+        self.controlnet_layout = QVBoxLayout()
         self.main_layout = QHBoxLayout()
 
         self.image_layout.addLayout(self.gallery, stretch=5)
         self.config_layout.addLayout(self.prompt_label)
         self.config_layout.addLayout(self.negative_prompt_label)
-        self.config_layout.addLayout(self.i2i_image_label)
-        self.config_layout.addLayout(self.i2i_strength_label)
         self.config_layout.addWidget(self.lora_list)
+        self.config_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_layout.addLayout(self.width_label)
         self.config_layout.addLayout(self.height_label)
         self.config_layout.addLayout(self.steps_label)
         self.config_layout.addLayout(self.batch_size_label)
-        self.config_layout.addWidget(self.prompt_enhance_checkbox)
-        self.config_layout.addWidget(self.submit_button)
-        self.main_layout.addLayout(self.image_layout, stretch=5)  # Left section
+        self.config_layout.addStrut(250)
+        self.image_layout.addWidget(self.submit_button)
+        self.controlnet_layout.addLayout(self.i2i_image_label)
+        self.controlnet_layout.addLayout(self.i2i_strength_label)
+        self.controlnet_layout.addLayout(self.ipadapter_image_label)
+        self.controlnet_layout.addLayout(self.ipadapter_strength_label)
+        self.controlnet_layout.addLayout(self.controlnet_image_label)
+        self.controlnet_layout.addWidget(self.controlnet_list)
+        self.controlnet_layout.addLayout(self.controlnet_conditioning_scale)
+        self.main_layout.addLayout(self.image_layout, stretch=6)  # Left section
         self.main_layout.addLayout(self.config_layout, stretch=1)
+        self.main_layout.addLayout(self.controlnet_layout, stretch=1)
         self.setLayout(self.main_layout)
 
     @asyncSlot()
@@ -65,6 +78,9 @@ class Sdxl(QWidget):
         batch_size = self.batch_size_label.input.text()
         lora_name = self.lora_list.currentText()
         strength = self.i2i_strength_label.input.text()
+        ip_adapter_strength = self.ipadapter_strength_label.input.text()
+        controlnet_strength = self.controlnet_conditioning_scale.input.text()
+        controlnet_processor = self.controlnet_list.currentText()
         print(f"SDXL: {prompt}, {negative_prompt}, {width}, {height}, {steps}, {batch_size}, {lora_name}, {strength}")
 
         kwargs = {}
@@ -86,6 +102,18 @@ class Sdxl(QWidget):
             kwargs["image"] = str(image)
             if strength != "":
                 kwargs["strength"] = float(strength)
+        if self.ipadapter_image_label.enable_checkbox.isChecked():
+            ip_adapter_image = image_to_base64(self.ipadapter_image_label.image_file_path, kwargs["width"], kwargs["height"])
+            kwargs["ip_adapter_image"] = str(ip_adapter_image)
+            if ip_adapter_strength != "":
+                kwargs["ip_adapter_strength"] = float(ip_adapter_strength)
+        if self.controlnet_image_label.enable_checkbox.isChecked():
+            controlnet_image = image_to_base64(self.controlnet_image_label.image_file_path, kwargs["width"], kwargs["height"])
+            kwargs["controlnet_image"] = str(controlnet_image)
+            kwargs["controlnet_processor"] = str(controlnet_processor)
+            if controlnet_strength != "":
+                kwargs["controlnet_conditioning"] = float(controlnet_strength)
+
         if self.prompt_enhance_checkbox.isChecked():
             prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
 
@@ -113,3 +141,10 @@ class Sdxl(QWidget):
         loras = await self.avernus_client.list_sdxl_loras()
         for lora in loras:
             self.lora_list.addItem(lora)
+
+    @asyncSlot()
+    async def make_controlnet_list(self):
+        self.controlnet_list.clear()
+        controlnets = await self.avernus_client.list_sdxl_controlnets()
+        for controlnet in controlnets:
+            self.controlnet_list.addItem(controlnet)
