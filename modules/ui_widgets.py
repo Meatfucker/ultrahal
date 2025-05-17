@@ -1,11 +1,13 @@
+import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
 class ClickablePixmap(QGraphicsPixmapItem):
-    def __init__(self, original_pixmap, gallery):
+    def __init__(self, original_pixmap, gallery, parent):
         super().__init__(original_pixmap)
+        self.parent = parent
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.original_pixmap = original_pixmap
@@ -22,7 +24,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
                 scaled_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
-                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery)
+                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent)
                 fullscreen_pixmap.setPixmap(scaled_pixmap)
                 fullscreen_pixmap.is_fullscreen = True
                 self.gallery.full_image_view.addItem(fullscreen_pixmap)
@@ -35,12 +37,26 @@ class ClickablePixmap(QGraphicsPixmapItem):
         menu = QMenu()
         save_action = menu.addAction("Save Image As...")
         copy_action = menu.addAction("Copy Image")
+        send_to_i2i_action = menu.addAction("Send to i2i")
+        send_to_ip_adapter_action = menu.addAction("Send to IP Adapter")
+        send_to_controlnet_action = menu.addAction("Send to Controlnet")
         action = menu.exec(global_pos)
         if action == save_action:
             self.save_image_dialog()
         if action == copy_action:
             clipboard = QApplication.clipboard()
             clipboard.setPixmap(self.original_pixmap)
+        if action == send_to_i2i_action:
+            self.parent.i2i_image_label.input_image = self.original_pixmap
+            self.parent.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == send_to_ip_adapter_action:
+            self.parent.ipadapter_image_label.input_image = self.original_pixmap
+            self.parent.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == send_to_controlnet_action:
+            self.parent.controlnet_image_label.input_image = self.original_pixmap
+            self.parent.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+
+
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -52,29 +68,61 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if file_path:
             self.original_pixmap.save(file_path)
 
-class ImageGallery(QVBoxLayout):
+class Console(QHBoxLayout):
     def __init__(self):
         super().__init__()
-        self.column_slider = QSlider(Qt.Horizontal)
-        self.column_slider.setMinimum(1)
-        self.column_slider.setMaximum(10)
-        self.column_slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
-        self.column_slider.setTickInterval(1)
-        self.column_slider.setValue(2)
+        self.text_display = QTextEdit(readOnly=True)
+        self.text_display.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.addWidget(self.text_display)
+        sys.stdout = self
+
+    def write(self, message):
+        self.text_display.insertPlainText(message)
+
+    def flush(self):
+        pass
+
+class HorizontalSlider(QHBoxLayout):
+    def __init__(self, label, min, max, default=1, interval=1, enable_ticks=True):
+        super().__init__()
+        self.label = QLabel(f"{label}:")
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimum(min)
+        self.slider.setMaximum(max)
+        if enable_ticks is True:
+            self.slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
+            self.slider.setTickInterval(interval)
+        self.slider.setValue(default)
+        self.slider.valueChanged.connect(self.update_value)
+        self.value_label = QLabel(f"{self.slider.value()}")
+
+        self.addWidget(self.label)
+        self.addWidget(self.value_label)
+        self.addWidget(self.slider)
+
+    def update_value(self):
+        self.value_label.setText(f"{self.slider.value()}")
+
+class ImageGallery(QVBoxLayout):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.column_slider = HorizontalSlider("Gallery Columns", 1, 10, 4, 1)
         self.clear_gallery_checkbox = QCheckBox("Clear Gallery")
-        self.gallery = ImageGalleryViewer(self)
-        self.column_slider.valueChanged.connect(self.gallery.tile_images)
+        self.gallery = ImageGalleryViewer(self, self.parent)
+        self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
 
         config_layout = QHBoxLayout()
-        config_layout.addWidget(self.column_slider)
+        config_layout.addLayout(self.column_slider)
         config_layout.addWidget(self.clear_gallery_checkbox)
         self.addLayout(config_layout)
         self.addWidget(self.gallery)
 
 
 class ImageGalleryViewer(QGraphicsView):
-    def __init__(self, top_layout):
+    def __init__(self, top_layout, parent):
         super().__init__()
+        self.parent = parent
         self.top_layout = top_layout
         self.gallery = QGraphicsScene()
         self.full_image_view = QGraphicsScene()
@@ -83,7 +131,7 @@ class ImageGalleryViewer(QGraphicsView):
         self.add_pixmap(self.default_image)
 
     def add_pixmap(self, pixmap):
-        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self)
+        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent)
         self.gallery.addItem(pixmap_item)
 
     def tile_images(self):
@@ -91,7 +139,7 @@ class ImageGalleryViewer(QGraphicsView):
         cur_y = 0
         image_height = 0
         width = self.viewport().width()
-        tile_width = width / self.top_layout.column_slider.value()
+        tile_width = width / self.top_layout.column_slider.slider.value()
         for image in self.gallery.items():
             scaled_pixmap = image.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
             if scaled_pixmap.size().height() > image_height:
@@ -121,6 +169,7 @@ class ScalingImageView(QGraphicsView):
         self.add_pixmap(self.default_image)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.gallery.setSceneRect(0, 0, 250, 250)
 
     def add_pixmap(self, pixmap):
         self.gallery.clear()

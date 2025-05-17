@@ -4,19 +4,20 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
 from qasync import QEventLoop, asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.console import Console
-from modules.flux_gen import Flux
-from modules.llm_chat import LlmChat
-from modules.sdxl_gen import Sdxl
+from modules.flux_tab import FluxTab
+from modules.llm_tab import LlmTab
+from modules.console_tab import QueueTab
+from modules.sdxl_tab import SdxlTab
 
 
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("UltraHal")
-        self.resize(1020, 800)
+        self.resize(1280, 800)
         self.avernus_url = "localhost"
         self.avernus_client = AvernusClient(self.avernus_url)
+        self.request_queue = None
 
         self.avernus_label = QLabel("Avernus URL:")
         self.avernus_entry = QLineEdit(text="localhost")
@@ -26,17 +27,17 @@ class MainWindow(QWidget):
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.update_avernus_url()
         self.tabs = QTabWidget()
-        self.console_tab = Console()
-        self.llm_chat_tab = LlmChat(self.avernus_client)
-        self.sdxl_tab = Sdxl(self.avernus_client)
-        self.flux_tab = Flux(self.avernus_client)
+        self.queue_tab = QueueTab(self.avernus_client)
+        self.llm_chat_tab = LlmTab(self.avernus_client)
+        self.sdxl_tab = SdxlTab(self.avernus_client)
+        self.flux_tab = FluxTab(self.avernus_client)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
         self.avernus_layout.addWidget(self.avernus_entry)
         self.avernus_layout.addWidget(self.avernus_current_server)
         self.avernus_layout.addWidget(self.avernus_button)
-        self.tabs.addTab(self.console_tab, "Console")
+        self.tabs.addTab(self.queue_tab, "Queue")
         self.tabs.addTab(self.llm_chat_tab, "LLM Chat")
         self.tabs.addTab(self.sdxl_tab, "SDXL Gen")
         self.tabs.addTab(self.flux_tab, "Flux Gen")
@@ -59,8 +60,9 @@ class MainWindow(QWidget):
         await self.sdxl_tab.make_lora_list()
         await self.sdxl_tab.make_controlnet_list()
         await self.flux_tab.make_lora_list()
+        await self.flux_tab.make_controlnet_list()
 
-        
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     icon = QIcon("assets/icon.png")

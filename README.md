@@ -4,9 +4,9 @@ This is a simple pyside6 GUI client for interfacing with the avernus API server 
 
 It has a llm chat, sdxl generation, and flux-dev generation. In the image generation mode images can be clicked to full screen them.
 
-![](assets/ultrahal_llm.png)
-![](assets/ultrahal_sdxl.png)
-![](assets/ultrahal_flux.png)
+![](assets/avernus_1.png)
+![](assets/avernus_2.png)
+![](assets/avernus_3.png)
 
 # Install Guide:
 Ensure you have python installed
@@ -19,5 +19,3 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add model selection
 - Add support for inpainting
 - add queue
-- add send to ... to gallery images
-- add flux controlnet and ipadapter support

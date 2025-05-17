@@ -3,7 +3,7 @@ from qasync import asyncSlot
 from modules.ui_widgets import SingleLineInputBox
 
 
-class LlmChat(QWidget):
+class LlmTab(QWidget):
     def __init__(self, avernus_client):
         super().__init__()
         self.avernus_client = avernus_client

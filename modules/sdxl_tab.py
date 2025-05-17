@@ -1,16 +1,18 @@
+import asyncio
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import  QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
-class Sdxl(QWidget):
+class SdxlTab(QWidget):
     def __init__(self, avernus_client):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
+        self.generate_count = 0
 
-        self.gallery = ImageGallery()
+        self.gallery = ImageGallery(self)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
@@ -22,12 +24,12 @@ class Sdxl(QWidget):
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
-        self.i2i_strength_label = SingleLineInputBox("i2i Strength", placeholder_text="0.7")
+        self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
-        self.ipadapter_strength_label = SingleLineInputBox("IP Adapter Strength", placeholder_text="0.6")
+        self.ipadapter_strength_label = HorizontalSlider("Strength", 0, 100, 60, enable_ticks=False)
         self.controlnet_image_label = ImageInputBox(self, "Controlnet", "assets/chili.png")
         self.controlnet_list = QComboBox()
-        self.controlnet_conditioning_scale = SingleLineInputBox("Controlnet Conditioning Scale", placeholder_text="0.5")
+        self.controlnet_conditioning_scale = HorizontalSlider("Strength", 0, 100, 50, enable_ticks=False)
 
         self.image_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
@@ -59,15 +61,21 @@ class Sdxl(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.submit_button.setText("Generating")
-        self.submit_button.setDisabled(True)
+        self.generate_count = self.generate_count + 1
+        self.submit_button.setText(f"Generating ({self.generate_count})")
         try:
             await self.generate()
         except Exception as e:
             print(f"SDXL on_submit EXCEPTION: {e}")
-        self.submit_button.setText("Submit")
-        self.submit_button.setDisabled(False)
+        self.generate_count = self.generate_count - 1
+        if self.generate_count == 0:
+            self.submit_button.setText("Submit")
+        else:
+            self.submit_button.setText(f"Generating ({self.generate_count})")
+        await asyncio.sleep(0)  # Let the event loop breathe
+        QApplication.processEvents()
 
+    @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
         prompt = self.prompt_label.input.toPlainText()
@@ -77,9 +85,9 @@ class Sdxl(QWidget):
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         lora_name = self.lora_list.currentText()
-        strength = self.i2i_strength_label.input.text()
-        ip_adapter_strength = self.ipadapter_strength_label.input.text()
-        controlnet_strength = self.controlnet_conditioning_scale.input.text()
+        strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
+        ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
+        controlnet_strength = round(float(self.controlnet_conditioning_scale.slider.value() * 0.01), 2)
         controlnet_processor = self.controlnet_list.currentText()
         print(f"SDXL: {prompt}, {negative_prompt}, {width}, {height}, {steps}, {batch_size}, {lora_name}, {strength}")
 
@@ -98,17 +106,20 @@ class Sdxl(QWidget):
             kwargs["height"] = 1024
 
         if self.i2i_image_label.enable_checkbox.isChecked():
-            image = image_to_base64(self.i2i_image_label.image_file_path, kwargs["width"], kwargs["height"])
+            self.i2i_image_label.input_image.save("temp.png", quality=100)
+            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if strength != "":
                 kwargs["strength"] = float(strength)
         if self.ipadapter_image_label.enable_checkbox.isChecked():
-            ip_adapter_image = image_to_base64(self.ipadapter_image_label.image_file_path, kwargs["width"], kwargs["height"])
+            self.ipadapter_image_label.input_image.save("temp.png", quality=100)
+            ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(ip_adapter_strength)
         if self.controlnet_image_label.enable_checkbox.isChecked():
-            controlnet_image = image_to_base64(self.controlnet_image_label.image_file_path, kwargs["width"], kwargs["height"])
+            self.controlnet_image_label.input_image.save("temp.png", quality=100)
+            controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["controlnet_image"] = str(controlnet_image)
             kwargs["controlnet_processor"] = str(controlnet_processor)
             if controlnet_strength != "":
@@ -124,6 +135,7 @@ class Sdxl(QWidget):
         except Exception as e:
             print(f"SDXL EXCEPTION: {e}")
 
+    @asyncSlot()
     async def display_images(self, images):
         if self.gallery.clear_gallery_checkbox.isChecked():
             self.gallery.gallery.gallery.clear()
@@ -133,6 +145,8 @@ class Sdxl(QWidget):
             self.gallery.gallery.add_pixmap(pixmap)
         self.gallery.gallery.tile_images()
         self.gallery.update()
+        await asyncio.sleep(0)  # Let the event loop breathe
+        QApplication.processEvents()
 
     @asyncSlot()
     async def make_lora_list(self):
