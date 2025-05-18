@@ -211,7 +211,7 @@ class ImageInputBox(QHBoxLayout):
         self.addLayout(self.image_layout)
 
     def load_image(self):
-        self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg)"))[0]
+        self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
         self.input_image = QPixmap(self.image_file_path)
         self.image_view.add_pixmap(self.input_image)
 
