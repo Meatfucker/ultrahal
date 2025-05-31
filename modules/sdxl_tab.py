@@ -1,18 +1,20 @@
 import asyncio
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlTab(QWidget):
-    def __init__(self, avernus_client):
+    def __init__(self, avernus_client, request_queue, gallery, queue_view):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.generate_count = 0
+        self.request_queue = request_queue
+        self.gallery = gallery
+        self.queue_view = queue_view
 
-        self.gallery = ImageGallery(self)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
@@ -31,53 +33,45 @@ class SdxlTab(QWidget):
         self.controlnet_list = QComboBox()
         self.controlnet_conditioning_scale = HorizontalSlider("Strength", 0, 100, 50, enable_ticks=False)
 
-        self.image_layout = QVBoxLayout()
-        self.config_layout = QVBoxLayout()
+        self.config_layout = QHBoxLayout()
+        self.config_widgets_layout = QVBoxLayout()
+        self.config_widgets_layout.setAlignment(Qt.AlignTop)
+        self.image_input_layout = QHBoxLayout()
+        self.i2i_layout = QVBoxLayout()
+        self.ip_adapter_layout = QVBoxLayout()
         self.controlnet_layout = QVBoxLayout()
-        self.main_layout = QHBoxLayout()
+        self.main_layout = QVBoxLayout()
 
-        self.image_layout.addLayout(self.gallery, stretch=5)
         self.config_layout.addLayout(self.prompt_label)
         self.config_layout.addLayout(self.negative_prompt_label)
-        self.config_layout.addWidget(self.lora_list)
-        self.config_layout.addWidget(self.prompt_enhance_checkbox)
-        self.config_layout.addLayout(self.width_label)
-        self.config_layout.addLayout(self.height_label)
-        self.config_layout.addLayout(self.steps_label)
-        self.config_layout.addLayout(self.batch_size_label)
-        self.config_layout.addStrut(250)
-        self.image_layout.addWidget(self.submit_button)
-        self.controlnet_layout.addLayout(self.i2i_image_label)
-        self.controlnet_layout.addLayout(self.i2i_strength_label)
-        self.controlnet_layout.addLayout(self.ipadapter_image_label)
-        self.controlnet_layout.addLayout(self.ipadapter_strength_label)
+        self.config_layout.addLayout(self.config_widgets_layout)
+
+        self.config_widgets_layout.addWidget(self.lora_list)
+        self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
+        self.config_widgets_layout.addLayout(self.width_label)
+        self.config_widgets_layout.addLayout(self.height_label)
+        self.config_widgets_layout.addLayout(self.steps_label)
+        self.config_widgets_layout.addLayout(self.batch_size_label)
+        self.config_widgets_layout.addWidget(self.submit_button)
+
+        self.image_input_layout.addLayout(self.i2i_layout)
+        self.image_input_layout.addLayout(self.ip_adapter_layout)
+        self.image_input_layout.addLayout(self.controlnet_layout)
+
+        self.i2i_layout.addLayout(self.i2i_image_label)
+        self.i2i_layout.addLayout(self.i2i_strength_label)
+        self.ip_adapter_layout.addLayout(self.ipadapter_image_label)
+        self.ip_adapter_layout.addLayout(self.ipadapter_strength_label)
         self.controlnet_layout.addLayout(self.controlnet_image_label)
         self.controlnet_layout.addWidget(self.controlnet_list)
         self.controlnet_layout.addLayout(self.controlnet_conditioning_scale)
-        self.main_layout.addLayout(self.image_layout, stretch=6)  # Left section
+
         self.main_layout.addLayout(self.config_layout, stretch=1)
-        self.main_layout.addLayout(self.controlnet_layout, stretch=1)
+        self.main_layout.addLayout(self.image_input_layout, stretch=1)
         self.setLayout(self.main_layout)
 
     @asyncSlot()
     async def on_submit(self):
-        self.generate_count = self.generate_count + 1
-        self.submit_button.setText(f"Generating ({self.generate_count})")
-        try:
-            await self.generate()
-        except Exception as e:
-            print(f"SDXL on_submit EXCEPTION: {e}")
-        self.generate_count = self.generate_count - 1
-        if self.generate_count == 0:
-            self.submit_button.setText("Submit")
-        else:
-            self.submit_button.setText(f"Generating ({self.generate_count})")
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
-
-    @asyncSlot()
-    async def generate(self):
-        """API call to generate the images and convert them from base64"""
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.width_label.input.text()
@@ -89,64 +83,50 @@ class SdxlTab(QWidget):
         ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
         controlnet_strength = round(float(self.controlnet_conditioning_scale.slider.value() * 0.01), 2)
         controlnet_processor = self.controlnet_list.currentText()
-        print(f"SDXL: {prompt}, {negative_prompt}, {width}, {height}, {steps}, {batch_size}, {lora_name}, {strength}")
-
-        kwargs = {}
-        if negative_prompt != "": kwargs["negative_prompt"] = negative_prompt
-        if steps != "": kwargs["steps"] = int(steps)
-        if batch_size != "": kwargs["batch_size"] = int(batch_size)
-        if lora_name != "<None>": kwargs["lora_name"] = str(lora_name)
-        if width != "":
-            kwargs["width"] = int(width)
+        i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
+        if i2i_image_enable is True:
+            i2i_image = self.i2i_image_label.input_image
         else:
-            kwargs["width"] = 1024
-        if height != "":
-            kwargs["height"] = int(height)
+            i2i_image = None
+        ip_adapter_enable = self.ipadapter_image_label.enable_checkbox.isChecked()
+        if ip_adapter_enable is True:
+            ip_adapter_image = self.ipadapter_image_label.input_image
         else:
-            kwargs["height"] = 1024
-
-        if self.i2i_image_label.enable_checkbox.isChecked():
-            self.i2i_image_label.input_image.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["image"] = str(image)
-            if strength != "":
-                kwargs["strength"] = float(strength)
-        if self.ipadapter_image_label.enable_checkbox.isChecked():
-            self.ipadapter_image_label.input_image.save("temp.png", quality=100)
-            ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["ip_adapter_image"] = str(ip_adapter_image)
-            if ip_adapter_strength != "":
-                kwargs["ip_adapter_strength"] = float(ip_adapter_strength)
-        if self.controlnet_image_label.enable_checkbox.isChecked():
-            self.controlnet_image_label.input_image.save("temp.png", quality=100)
-            controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["controlnet_image"] = str(controlnet_image)
-            kwargs["controlnet_processor"] = str(controlnet_processor)
-            if controlnet_strength != "":
-                kwargs["controlnet_conditioning"] = float(controlnet_strength)
-
-        if self.prompt_enhance_checkbox.isChecked():
-            prompt = await self.avernus_client.llm_chat(f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
+            ip_adapter_image = None
+        controlnet_enable = self.controlnet_image_label.enable_checkbox.isChecked()
+        if controlnet_enable is True:
+            controlnet_image = self.controlnet_image_label.input_image
+        else:
+            controlnet_image = None
+        enhance_prompt = self.prompt_enhance_checkbox.isChecked()
 
         try:
-            base64_images = await self.avernus_client.sdxl_image(prompt, **kwargs)
-            images = await base64_to_images(base64_images)
-            await self.display_images(images)
+            request = SDXLRequest(avernus_client=self.avernus_client,
+                                  gallery=self.gallery,
+                                  tab=self,
+                                  prompt=prompt,
+                                  negative_prompt=negative_prompt,
+                                  width=width,
+                                  height=height,
+                                  steps=steps,
+                                  batch_size=batch_size,
+                                  lora_name=lora_name,
+                                  strength=strength,
+                                  ip_adapter_strength=ip_adapter_strength,
+                                  controlnet_strength=controlnet_strength,
+                                  controlnet_processor=controlnet_processor,
+                                  i2i_image_enabled=i2i_image_enable,
+                                  i2i_image=i2i_image,
+                                  ip_adapter_enabled=ip_adapter_enable,
+                                  ip_adapter_image=ip_adapter_image,
+                                  controlnet_enabled=controlnet_enable,
+                                  controlnet_image=controlnet_image,
+                                  enhance_prompt=enhance_prompt)
+            queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#003300")
+            request.ui_item = queue_item
+            await self.request_queue.put(request)
         except Exception as e:
-            print(f"SDXL EXCEPTION: {e}")
-
-    @asyncSlot()
-    async def display_images(self, images):
-        if self.gallery.clear_gallery_checkbox.isChecked():
-            self.gallery.gallery.gallery.clear()
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
+            print(f"SDXL on_submit EXCEPTION: {e}")
 
     @asyncSlot()
     async def make_lora_list(self):
@@ -162,3 +142,106 @@ class SdxlTab(QWidget):
         controlnets = await self.avernus_client.list_sdxl_controlnets()
         for controlnet in controlnets:
             self.controlnet_list.addItem(controlnet)
+
+class SDXLRequest:
+    def __init__(self, avernus_client, gallery, tab, prompt, negative_prompt, width, height, steps, batch_size, lora_name,
+                 strength, ip_adapter_strength, controlnet_strength, controlnet_processor, i2i_image_enabled,
+                 i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt):
+        self.avernus_client = avernus_client
+        self.gallery = gallery
+        self.tab = tab
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
+        self.width = width
+        self.height = height
+        self.steps = steps
+        self.batch_size = batch_size
+        self.lora_name = lora_name
+        self.strength = strength
+        self.ip_adapter_strength = ip_adapter_strength
+        self.controlnet_strength = controlnet_strength
+        self.controlnet_processor = controlnet_processor
+        self.i2i_image_enabled = i2i_image_enabled
+        self.i2i_image = i2i_image
+        self.ip_adapter_enabled = ip_adapter_enabled
+        self.ip_adapter_image = ip_adapter_image
+        self.controlnet_enabled = controlnet_enabled
+        self.controlnet_image = controlnet_image
+        self.enhance_prompt = enhance_prompt
+
+    async def run(self):
+        self.ui_item.status_label.setText("Running")
+        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
+        await self.generate()
+        self.ui_item.status_label.setText("Finished")
+        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
+
+
+    @asyncSlot()
+    async def generate(self):
+        """API call to generate the images and convert them from base64"""
+        print(f"SDXL: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}, {self.strength}")
+
+        kwargs = {}
+        if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
+        if self.steps != "": kwargs["steps"] = int(self.steps)
+        if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
+        if self.lora_name != "<None>": kwargs["lora_name"] = str(self.lora_name)
+        if self.width != "":
+            kwargs["width"] = int(self.width)
+        else:
+            kwargs["width"] = 1024
+        if self.height != "":
+            kwargs["height"] = int(self.height)
+        else:
+            kwargs["height"] = 1024
+
+        if self.i2i_image_enabled is True:
+            self.i2i_image.save("temp.png", quality=100)
+            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            kwargs["image"] = str(image)
+            if self.strength != "":
+                kwargs["strength"] = float(self.strength)
+        if self.ip_adapter_enabled is True:
+            self.ip_adapter_image.save("temp.png", quality=100)
+            ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            kwargs["ip_adapter_image"] = str(ip_adapter_image)
+            if self.ip_adapter_strength != "":
+                kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
+        if self.controlnet_enabled is True:
+            self.controlnet_image.save("temp.png", quality=100)
+            controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            kwargs["controlnet_image"] = str(controlnet_image)
+            kwargs["controlnet_processor"] = str(self.controlnet_processor)
+            if self.controlnet_strength != "":
+                kwargs["controlnet_conditioning"] = float(self.controlnet_strength)
+
+        if self.enhance_prompt is True:
+            self.enhanced_prompt = await self.avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            try:
+                base64_images = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            except Exception as e:
+                print(f"SDXL EXCEPTION: {e}")
+        else:
+            try:
+                base64_images = await self.avernus_client.sdxl_image(self.prompt, **kwargs)
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            except Exception as e:
+                print(f"SDXL EXCEPTION: {e}")
+
+    @asyncSlot()
+    async def display_images(self, images):
+        if self.gallery.clear_gallery_checkbox.isChecked():
+            self.gallery.gallery.gallery.clear()
+        for image in images:
+            pixmap = QPixmap()
+            pixmap.loadFromData(image.getvalue())
+            self.gallery.gallery.add_pixmap(pixmap, self.tab)
+        self.gallery.gallery.tile_images()
+        self.gallery.update()
+        await asyncio.sleep(0)  # Let the event loop breathe
+        QApplication.processEvents()

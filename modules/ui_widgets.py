@@ -1,13 +1,16 @@
 import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
-                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider)
+                               QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
+                               QFrame, QSizePolicy, QScrollArea)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
+
 class ClickablePixmap(QGraphicsPixmapItem):
-    def __init__(self, original_pixmap, gallery, parent):
+    def __init__(self, original_pixmap, gallery, parent, source_tab):
         super().__init__(original_pixmap)
         self.parent = parent
+        self.source_tab = source_tab
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.original_pixmap = original_pixmap
@@ -24,7 +27,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
                 scaled_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
-                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent)
+                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.source_tab)
                 fullscreen_pixmap.setPixmap(scaled_pixmap)
                 fullscreen_pixmap.is_fullscreen = True
                 self.gallery.full_image_view.addItem(fullscreen_pixmap)
@@ -47,16 +50,14 @@ class ClickablePixmap(QGraphicsPixmapItem):
             clipboard = QApplication.clipboard()
             clipboard.setPixmap(self.original_pixmap)
         if action == send_to_i2i_action:
-            self.parent.i2i_image_label.input_image = self.original_pixmap
-            self.parent.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.source_tab.i2i_image_label.input_image = self.original_pixmap
+            self.source_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
         if action == send_to_ip_adapter_action:
-            self.parent.ipadapter_image_label.input_image = self.original_pixmap
-            self.parent.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.source_tab.ipadapter_image_label.input_image = self.original_pixmap
+            self.source_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
         if action == send_to_controlnet_action:
-            self.parent.controlnet_image_label.input_image = self.original_pixmap
-            self.parent.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
-
-
+            self.source_tab.controlnet_image_label.input_image = self.original_pixmap
+            self.source_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -127,11 +128,9 @@ class ImageGalleryViewer(QGraphicsView):
         self.gallery = QGraphicsScene()
         self.full_image_view = QGraphicsScene()
         self.setScene(self.gallery)
-        self.default_image = QPixmap("assets/chili.png")
-        self.add_pixmap(self.default_image)
 
-    def add_pixmap(self, pixmap):
-        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent)
+    def add_pixmap(self, pixmap, source_tab):
+        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent, source_tab)
         self.gallery.addItem(pixmap_item)
 
     def tile_images(self):
@@ -153,42 +152,14 @@ class ImageGalleryViewer(QGraphicsView):
                 cur_x = 0
             else:
                 cur_x = cur_x + tile_width
+        self.gallery.setSceneRect(0, 0, width, cur_y + image_height)
+
 
     def resizeEvent(self, event):
         """Resize event to ensure the images fit within the view and re-tile them."""
         super().resizeEvent(event)
         self.tile_images()  # Fit the image to the window size
 
-class ScalingImageView(QGraphicsView):
-    def __init__(self):
-        super().__init__()
-        self.gallery = QGraphicsScene()
-        self.setScene(self.gallery)
-        self.default_image = QPixmap("assets/chili.png")
-        self.original_image = self.default_image
-        self.add_pixmap(self.default_image)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.gallery.setSceneRect(0, 0, 250, 250)
-
-    def add_pixmap(self, pixmap):
-        self.gallery.clear()
-        pixmap_item = QGraphicsPixmapItem(pixmap)
-        self.original_image = pixmap
-        self.gallery.addItem(pixmap_item)
-        self.resize_image()
-
-    def resize_image(self):
-        width = self.viewport().width()
-        for image in self.gallery.items():
-            scaled_pixmap = self.original_image.scaledToWidth(width, Qt.SmoothTransformation)
-            image.setPixmap(scaled_pixmap)
-            image.setPos(0, 0)
-
-    def resizeEvent(self, event):
-        """Resize event to ensure the images fit within the view and re-tile them."""
-        super().resizeEvent(event)
-        self.resize_image()  # Fit the image to the window size
 
 class ImageInputBox(QHBoxLayout):
     def __init__(self, source_widget, name="", default_image_path="assets/chili.png"):
@@ -224,6 +195,100 @@ class ParagraphInputBox(QVBoxLayout):
         self.input = QTextEdit(acceptRichText=False)
         self.addWidget(self.input)
 
+class QueueObjectWidget(QFrame):
+    def __init__(self, queue_object, hex_color, request_queue, queue_view):
+        super().__init__()
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.setFrameShape(QFrame.Shape.Box)
+        self.setLineWidth(1)
+
+        self.queue_object = queue_object
+        self.hex_color = hex_color
+        self.request_queue = request_queue
+        self.queue_view = queue_view
+
+        self.main_layout = QHBoxLayout(self)
+        self.main_layout.setContentsMargins(2, 2, 2, 2)
+
+        self.prompt_layout = QVBoxLayout()
+        self.prompt_layout.setAlignment(Qt.AlignTop)
+        self.prompt_layout.setContentsMargins(0, 0, 0, 0)
+        self.prompt_layout.setSpacing(0)
+        self.prompt_container = QWidget()
+        self.prompt_container.setStyleSheet(f"color: #ffffff; background-color: {self.hex_color};")
+        self.prompt_container.setLayout(self.prompt_layout)
+
+        self.status_layout = QVBoxLayout()
+        self.status_layout.setContentsMargins(0, 0, 0, 0)
+        self.status_container = QWidget()
+        self.status_container.setStyleSheet(f"color: #ffffff; background-color: #444400;")
+        self.status_container.setLayout(self.status_layout)
+
+        self.type_label = QLabel(self.queue_object.__class__.__name__)
+        self.prompt_separator = QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Plain, lineWidth=10)
+        self.prompt_separator.setStyleSheet(f"color: #888888; background-color: #888888;")
+        self.prompt_label = QLabel(self.queue_object.prompt, wordWrap=True)
+        self.status_label = QLabel("Queued")
+
+        self.main_layout.addWidget(self.prompt_container, stretch=20)
+        self.main_layout.addWidget(self.status_container)
+        self.prompt_layout.addWidget(self.type_label)
+        self.prompt_layout.addWidget(self.prompt_separator)
+        self.prompt_layout.addWidget(self.prompt_label)
+        self.status_layout.addWidget(self.status_label)
+
+
+class QueueViewer(QScrollArea):
+    def __init__(self):
+        super().__init__()
+        self.container_widget = QWidget()
+        self.setWidget(self.container_widget)
+        self.setWidgetResizable(True)
+
+        self.main_layout = QVBoxLayout(self.container_widget)
+        self.main_layout.setAlignment(Qt.AlignTop)
+        self.main_layout.addStrut(250)
+
+    def add_queue_item(self, queue_item, request_queue, queue_view, hex_color):
+        queue_widget = QueueObjectWidget(queue_item, hex_color, request_queue, queue_view)
+        self.main_layout.addWidget(queue_widget)
+        return queue_widget
+
+    def del_queue_item(self, queue_item):
+        self.main_layout.removeWidget(queue_item)
+
+
+class ScalingImageView(QGraphicsView):
+    def __init__(self):
+        super().__init__()
+        self.gallery = QGraphicsScene()
+        self.setScene(self.gallery)
+        self.default_image = QPixmap("assets/chili.png")
+        self.original_image = self.default_image
+        self.add_pixmap(self.default_image)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def add_pixmap(self, pixmap):
+        self.gallery.clear()
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.original_image = pixmap
+        self.gallery.addItem(pixmap_item)
+        self.resize_image()
+
+    def resize_image(self):
+        width = self.viewport().width()
+        for image in self.gallery.items():
+            scaled_pixmap = self.original_image.scaledToWidth(width, Qt.SmoothTransformation)
+            image.setPixmap(scaled_pixmap)
+            image.setPos(0, 0)
+
+    def resizeEvent(self, event):
+        """Resize event to ensure the images fit within the view and re-tile them."""
+        super().resizeEvent(event)
+        self.resize_image()  # Fit the image to the window size
+
+
 class SingleLineInputBox(QHBoxLayout):
     def __init__(self, label, placeholder_text=None):
         super().__init__()
@@ -234,5 +299,3 @@ class SingleLineInputBox(QHBoxLayout):
             self.input = QLineEdit()
         self.addWidget(self.label)
         self.addWidget(self.input)
-
-

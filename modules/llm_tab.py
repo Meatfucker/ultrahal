@@ -4,9 +4,11 @@ from modules.ui_widgets import SingleLineInputBox
 
 
 class LlmTab(QWidget):
-    def __init__(self, avernus_client):
+    def __init__(self, avernus_client, request_queue, queue_view):
         super().__init__()
         self.avernus_client = avernus_client
+        self.request_queue = request_queue
+        self.queue_view = queue_view
         self.history = None
 
         self.text_display = QTextEdit(readOnly=True)
@@ -38,38 +40,52 @@ class LlmTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.submit_button.setText("Generating")
-        self.submit_button.setDisabled(True)
-        self.text_input.setDisabled(True)
-        await self.generate()
-        self.submit_button.setText("Submit")
-        self.submit_button.setDisabled(False)
-        self.text_input.setDisabled(False)
-
-    async def generate(self):
         input_text = self.text_input.toPlainText()
         model_name = self.model_repo_label.input.text()
-        if model_name == "":
-            model_name = "Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4"
-        print(f"LLM: {input_text}, {model_name}")
-        if self.history is None:
-            response = await self.avernus_client.llm_chat(input_text, model_name=model_name)
-        else:
-            gen_history = self.history.get("history", [])
-            response = await self.avernus_client.llm_chat(input_text, messages=gen_history, model_name=model_name)
-        if isinstance(response, str):
-            await self.add_history("user", input_text)
-            await self.add_history("assistant", response)
-            font = self.text_display.currentFont()
-            font.setBold(True)
-            self.text_display.insertPlainText("User: ")
-            font.setBold(False)
-            self.text_display.insertPlainText(f"{input_text}\n\r")
-            self.text_display.insertPlainText(f"Assistant: {response}\n\r")
-            self.text_input.clear()
+        request = LLMRequest(self.avernus_client, self, input_text, model_name)
+        queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#333300")
+        request.ui_item = queue_item
+        await self.request_queue.put(request)
 
     async def add_history(self, role, content):
         """Adds each message to the history."""
         if self.history is None:
             self.history = {"history": []}
         self.history["history"].append({"role": role, "content": content})
+
+class LLMRequest:
+    def __init__(self, avernus_client, tab, input_text, model_name):
+        self.avernus_client = avernus_client
+        self.tab = tab
+        self.prompt = input_text
+        self.model_name = model_name
+
+    async def run(self):
+        self.ui_item.status_label.setText("Running")
+        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
+        await self.generate()
+        self.ui_item.status_label.setText("Finished")
+        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
+
+    async def generate(self):
+        if self.model_name == "":
+            self.model_name = "Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4"
+        print(f"LLM: {self.prompt}, {self.model_name}")
+        if self.tab.history is None:
+            response = await self.avernus_client.llm_chat(self.prompt, model_name=self.model_name)
+        else:
+            gen_history = self.tab.history.get("history", [])
+            response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
+        if isinstance(response, str):
+            await self.tab.add_history("user", self.prompt)
+            await self.tab.add_history("assistant", response)
+            font = self.tab.text_display.currentFont()
+            font.setBold(True)
+            self.tab.text_display.insertPlainText("User: ")
+            font.setBold(False)
+            self.tab.text_display.insertPlainText(f"{self.prompt}\n\r")
+            self.tab.text_display.insertPlainText(f"Assistant: {response}\n\r")
+            self.tab.text_input.clear()
+
+
+

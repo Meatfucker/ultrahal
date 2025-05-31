@@ -15,7 +15,7 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 # TODO:
 
-- Lots, lol
 - Add model selection
 - Add support for inpainting
-- add queue
+- Add video pipelines
+- Add Audio Pipelines
