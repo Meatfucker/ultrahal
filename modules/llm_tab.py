@@ -4,11 +4,13 @@ from modules.ui_widgets import SingleLineInputBox
 
 
 class LlmTab(QWidget):
-    def __init__(self, avernus_client, request_queue, queue_view):
+    def __init__(self, avernus_client, request_queue, tabs):
         super().__init__()
         self.avernus_client = avernus_client
         self.request_queue = request_queue
-        self.queue_view = queue_view
+        self.tabs = tabs
+        self.queue_tab = self.tabs.widget(1)
+        self.queue_view = self.queue_tab.queue_view
         self.history = None
 
         self.text_display = QTextEdit(readOnly=True)

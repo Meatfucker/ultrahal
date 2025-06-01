@@ -8,12 +8,15 @@ from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBo
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlTab(QWidget):
-    def __init__(self, avernus_client, request_queue, gallery, queue_view):
+    def __init__(self, avernus_client, request_queue, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
         self.request_queue = request_queue
-        self.gallery = gallery
-        self.queue_view = queue_view
+        self.tabs = tabs
+        self.gallery_tab = self.tabs.widget(0)
+        self.gallery = self.gallery_tab.gallery
+        self.queue_tab = self.tabs.widget(1)
+        self.queue_view = self.queue_tab.queue_view
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -103,7 +106,7 @@ class SdxlTab(QWidget):
         try:
             request = SDXLRequest(avernus_client=self.avernus_client,
                                   gallery=self.gallery,
-                                  tab=self,
+                                  tabs=self.tabs,
                                   prompt=prompt,
                                   negative_prompt=negative_prompt,
                                   width=width,
@@ -144,12 +147,12 @@ class SdxlTab(QWidget):
             self.controlnet_list.addItem(controlnet)
 
 class SDXLRequest:
-    def __init__(self, avernus_client, gallery, tab, prompt, negative_prompt, width, height, steps, batch_size, lora_name,
+    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size, lora_name,
                  strength, ip_adapter_strength, controlnet_strength, controlnet_processor, i2i_image_enabled,
                  i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt):
         self.avernus_client = avernus_client
         self.gallery = gallery
-        self.tab = tab
+        self.tabs = tabs
         self.prompt = prompt
         self.negative_prompt = negative_prompt
         self.width = width
@@ -237,10 +240,12 @@ class SDXLRequest:
     async def display_images(self, images):
         if self.gallery.clear_gallery_checkbox.isChecked():
             self.gallery.gallery.gallery.clear()
+
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap, self.tab)
+            self.gallery.gallery.add_pixmap(pixmap, self.tabs)
+
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe

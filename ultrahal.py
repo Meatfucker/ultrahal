@@ -10,6 +10,7 @@ from modules.flux_tab import FluxTab
 from modules.llm_tab import LlmTab
 from modules.gallery import GalleryTab
 from modules.sdxl_tab import SdxlTab
+from modules.sdxl_inpaint_tab import SdxlInpaintTab
 from modules.queue import QueueTab
 
 
@@ -32,12 +33,17 @@ class MainWindow(QWidget):
         self.avernus_button = QPushButton("Update URL")
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.update_avernus_url()
+
         self.tabs = QTabWidget()
         self.gallery_tab = GalleryTab(self.avernus_client, self)
         self.queue_tab = QueueTab(self.avernus_client, self)
-        self.llm_chat_tab = LlmTab(self.avernus_client, self.request_queue, self.queue_tab.queue_view)
-        self.sdxl_tab = SdxlTab(self.avernus_client, self.request_queue, self.gallery_tab.gallery, self.queue_tab.queue_view)
-        self.flux_tab = FluxTab(self.avernus_client, self.request_queue, self.gallery_tab.gallery, self.queue_tab.queue_view)
+        self.tabs.addTab(self.gallery_tab, "Gallery")
+        self.tabs.addTab(self.queue_tab, "Queue")
+
+        self.llm_chat_tab = LlmTab(self.avernus_client, self.request_queue, self.tabs)
+        self.sdxl_tab = SdxlTab(self.avernus_client, self.request_queue, self.tabs)
+        self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.request_queue, self.tabs)
+        self.flux_tab = FluxTab(self.avernus_client, self.request_queue, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -45,11 +51,11 @@ class MainWindow(QWidget):
         self.avernus_layout.addWidget(self.avernus_current_server)
         self.avernus_layout.addWidget(self.avernus_button)
 
-        self.tabs.addTab(self.gallery_tab, "Gallery")
-        self.tabs.addTab(self.queue_tab, "Queue")
-        self.tabs.addTab(self.llm_chat_tab, "LLM Chat")
-        self.tabs.addTab(self.sdxl_tab, "SDXL Gen")
-        self.tabs.addTab(self.flux_tab, "Flux Gen")
+
+        self.tabs.addTab(self.llm_chat_tab, "LLM")
+        self.tabs.addTab(self.sdxl_tab, "SDXL")
+        self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
+        self.tabs.addTab(self.flux_tab, "Flux")
 
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)

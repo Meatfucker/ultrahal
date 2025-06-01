@@ -7,10 +7,14 @@ from PySide6.QtCore import Qt
 
 
 class ClickablePixmap(QGraphicsPixmapItem):
-    def __init__(self, original_pixmap, gallery, parent, source_tab):
+    def __init__(self, original_pixmap, gallery, parent, tabs):
         super().__init__(original_pixmap)
         self.parent = parent
-        self.source_tab = source_tab
+        self.tabs = tabs
+        self.queue_tab = self.tabs.widget(1)
+        self.sdxl_tab = self.tabs.widget(3)
+        self.flux_tab = self.tabs.widget(5)
+        self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.original_pixmap = original_pixmap
@@ -27,7 +31,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
                 scaled_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
-                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.source_tab)
+                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.tabs)
                 fullscreen_pixmap.setPixmap(scaled_pixmap)
                 fullscreen_pixmap.is_fullscreen = True
                 self.gallery.full_image_view.addItem(fullscreen_pixmap)
@@ -40,24 +44,42 @@ class ClickablePixmap(QGraphicsPixmapItem):
         menu = QMenu()
         save_action = menu.addAction("Save Image As...")
         copy_action = menu.addAction("Copy Image")
-        send_to_i2i_action = menu.addAction("Send to i2i")
-        send_to_ip_adapter_action = menu.addAction("Send to IP Adapter")
-        send_to_controlnet_action = menu.addAction("Send to Controlnet")
+        sdxl_menu = menu.addMenu("SDXL")
+        flux_menu = menu.addMenu("Flux")
+        sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
+        sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
+        sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
+        flux_send_to_i2i = flux_menu.addAction("Send to I2I")
+        flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
+        flux_sent_to_controlnet = flux_menu.addAction("Send to Controlnet")
+
+
         action = menu.exec(global_pos)
         if action == save_action:
             self.save_image_dialog()
         if action == copy_action:
             clipboard = QApplication.clipboard()
             clipboard.setPixmap(self.original_pixmap)
-        if action == send_to_i2i_action:
-            self.source_tab.i2i_image_label.input_image = self.original_pixmap
-            self.source_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
-        if action == send_to_ip_adapter_action:
-            self.source_tab.ipadapter_image_label.input_image = self.original_pixmap
-            self.source_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
-        if action == send_to_controlnet_action:
-            self.source_tab.controlnet_image_label.input_image = self.original_pixmap
-            self.source_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+
+        if action == sdxl_send_to_i2i:
+            self.sdxl_tab.i2i_image_label.input_image = self.original_pixmap
+            self.sdxl_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == sdxl_send_to_ipadapter:
+            self.sdxl_tab.ipadapter_image_label.input_image = self.original_pixmap
+            self.sdxl_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == sdxl_sent_to_controlnet:
+            self.sdxl_tab.controlnet_image_label.input_image = self.original_pixmap
+            self.sdxl_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+
+        if action == flux_send_to_i2i:
+            self.flux_tab.i2i_image_label.input_image = self.original_pixmap
+            self.flux_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == flux_send_to_ipadapter:
+            self.flux_tab.ipadapter_image_label.input_image = self.original_pixmap
+            self.flux_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == flux_sent_to_controlnet:
+            self.flux_tab.controlnet_image_label.input_image = self.original_pixmap
+            self.flux_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -129,8 +151,8 @@ class ImageGalleryViewer(QGraphicsView):
         self.full_image_view = QGraphicsScene()
         self.setScene(self.gallery)
 
-    def add_pixmap(self, pixmap, source_tab):
-        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent, source_tab)
+    def add_pixmap(self, pixmap, tabs):
+        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent, tabs)
         self.gallery.addItem(pixmap_item)
 
     def tile_images(self):
