@@ -246,7 +246,10 @@ class QueueObjectWidget(QFrame):
         self.status_container.setStyleSheet(f"color: #ffffff; background-color: #444400;")
         self.status_container.setLayout(self.status_layout)
 
-        self.type_label = QLabel(self.queue_object.__class__.__name__)
+        if self.queue_object.queue_info:
+            self.type_label = QLabel(f"{self.queue_object.__class__.__name__} | {self.queue_object.queue_info}")
+        else:
+            self.type_label = QLabel(self.queue_object.__class__.__name__)
         self.prompt_separator = QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Plain, lineWidth=10)
         self.prompt_separator.setStyleSheet(f"color: #888888; background-color: #888888;")
         self.prompt_label = QLabel(self.queue_object.prompt, wordWrap=True)

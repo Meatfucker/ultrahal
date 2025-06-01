@@ -161,6 +161,11 @@ class FluxRequest:
         self.controlnet_enabled = controlnet_enabled
         self.controlnet_image = controlnet_image
         self.enhance_prompt = enhance_prompt
+        if self.width == "":
+            self.width = 1024
+        if self.height == "":
+            self.height = 1024
+        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.controlnet_enabled}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -179,14 +184,8 @@ class FluxRequest:
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.lora_name != "<None>": kwargs["lora_name"] = str(self.lora_name)
-        if self.width != "":
-            kwargs["width"] = int(self.width)
-        else:
-            kwargs["width"] = 1024
-        if self.height != "":
-            kwargs["height"] = int(self.height)
-        else:
-            kwargs["height"] = 1024
+        kwargs["width"] = int(self.width)
+        kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled is True:
             self.i2i_image.save("temp.png", quality=100)

@@ -61,6 +61,7 @@ class LLMRequest:
         self.tab = tab
         self.prompt = input_text
         self.model_name = model_name
+        self.queue_info = None
 
     async def run(self):
         self.ui_item.status_label.setText("Running")

@@ -40,8 +40,6 @@ class SdxlInpaintTab(QWidget):
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
-
-
         self.main_layout.addLayout(self.config_layout, stretch=1)
         self.setLayout(self.main_layout)
 
@@ -79,6 +77,7 @@ class SDXLInpaintRequest:
         self.steps = steps
         self.batch_size = batch_size
         self.enhance_prompt = enhance_prompt
+        self.queue_info = None
 
     async def run(self):
         self.ui_item.status_label.setText("Running")

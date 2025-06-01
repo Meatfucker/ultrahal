@@ -23,4 +23,3 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add Audio Pipelines
 - Allow loading multiple loras
 - Add options for sorting the gallery
-- Add more information to the queue view
