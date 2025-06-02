@@ -1,10 +1,11 @@
 import asyncio
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlInpaintTab(QWidget):
@@ -18,6 +19,15 @@ class SdxlInpaintTab(QWidget):
         self.queue_tab = self.tabs.widget(1)
         self.queue_view = self.queue_tab.queue_view
 
+        self.paint_area = PainterWidget()
+
+        self.clear_mask_button = QPushButton("Clear Mask")
+        self.clear_mask_button.clicked.connect(self.paint_area.clear)
+        self.brush_size_slider = HorizontalSlider("Brush Size", 1, 200, 10, enable_ticks=False)
+        self.brush_size_slider.slider.valueChanged.connect(self.set_brush_size)
+        self.load_button = QPushButton("Load Image")
+        self.load_button.clicked.connect(self.paint_area.load_image)
+        self.strength_slider = HorizontalSlider("Replace %", 0, 100, 70, enable_ticks=False)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
@@ -26,11 +36,18 @@ class SdxlInpaintTab(QWidget):
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
 
+        self.paint_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
         self.config_widgets_layout = QVBoxLayout()
         self.config_widgets_layout.setAlignment(Qt.AlignTop)
-        self.main_layout = QVBoxLayout()
+        self.main_layout = QHBoxLayout()
 
+        self.paint_layout.addWidget(self.paint_area)
+
+        self.config_layout.addWidget(self.clear_mask_button)
+        self.config_layout.addLayout(self.brush_size_slider)
+        self.config_layout.addWidget(self.load_button)
+        self.config_layout.addLayout(self.strength_slider)
         self.config_layout.addLayout(self.prompt_label)
         self.config_layout.addLayout(self.negative_prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
@@ -40,6 +57,7 @@ class SdxlInpaintTab(QWidget):
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
+        self.main_layout.addLayout(self.paint_layout, stretch=4)
         self.main_layout.addLayout(self.config_layout, stretch=1)
         self.setLayout(self.main_layout)
 
@@ -50,6 +68,9 @@ class SdxlInpaintTab(QWidget):
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        width = self.paint_area.original_image.width()
+        height = self.paint_area.original_image.height()
+        strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
 
         try:
             request = SDXLInpaintRequest(avernus_client=self.avernus_client,
@@ -59,16 +80,24 @@ class SdxlInpaintTab(QWidget):
                                          negative_prompt=negative_prompt,
                                          steps=steps,
                                          batch_size=batch_size,
-                                         enhance_prompt=enhance_prompt)
+                                         enhance_prompt=enhance_prompt,
+                                         width=width,
+                                         height=height,
+                                         image=self.paint_area.original_image,
+                                         mask_image=self.paint_area.original_mask,
+                                         strength=strength)
             queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#005500")
             request.ui_item = queue_item
             await self.request_queue.put(request)
         except Exception as e:
             print(f"SDXL INPAINT on_submit EXCEPTION: {e}")
 
+    def set_brush_size(self):
+        self.paint_area.pen.setWidth(int(self.brush_size_slider.slider.value()))
+
 
 class SDXLInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, enhance_prompt):
+    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, enhance_prompt, width, height, image, mask_image, strength):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -78,6 +107,11 @@ class SDXLInpaintRequest:
         self.batch_size = batch_size
         self.enhance_prompt = enhance_prompt
         self.queue_info = None
+        self.image = image
+        self.mask_image = mask_image
+        self.width = width
+        self.height = height
+        self.strength = strength
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -96,6 +130,15 @@ class SDXLInpaintRequest:
         if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
+        self.image.save("temp.png", quality=100)
+        image = image_to_base64("temp.png", self.width, self.height)
+        kwargs["image"] = str(image)
+        self.mask_image.save("temp.png", quality=100)
+        mask_image = image_to_base64("temp.png", self.width, self.height)
+        kwargs["mask_image"] = str(mask_image)
+        kwargs["width"] = self.width
+        kwargs["height"] = self.height
+        kwargs["strength"] = self.strength
 
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(

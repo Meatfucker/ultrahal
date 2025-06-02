@@ -2,8 +2,8 @@ import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
                                QFrame, QSizePolicy, QScrollArea)
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor
+from PySide6.QtCore import Qt, QSize
 
 
 class ClickablePixmap(QGraphicsPixmapItem):
@@ -13,30 +13,46 @@ class ClickablePixmap(QGraphicsPixmapItem):
         self.tabs = tabs
         self.queue_tab = self.tabs.widget(1)
         self.sdxl_tab = self.tabs.widget(3)
+        self.sdxl_inpaint_tab = self.tabs.widget(4)
         self.flux_tab = self.tabs.widget(5)
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.original_pixmap = original_pixmap
         self.gallery = gallery
-        self.is_fullscreen = False
+        self.view_state = 1
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            if self.is_fullscreen is True:
-                self.is_fullscreen = False
-                self.gallery.setScene(self.gallery.gallery)
+            print(self.view_state)
+            if self.view_state == 1:
+                print("view state 1")
+                width = self.gallery.viewport().width()
+                height = self.gallery.viewport().height()
+                self.gallery.scaled_image_view.clear()
+                scaled_pixmap = self.original_pixmap.scaled(QSize(width, height), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled_to_fit_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.tabs)
+                scaled_to_fit_pixmap.setPixmap(scaled_pixmap)
+                scaled_to_fit_pixmap.view_state = 2
+                self.gallery.scaled_image_view.addItem(scaled_to_fit_pixmap)
                 self.gallery.centerOn(0, 0)
-            else:
+                self.gallery.setScene(self.gallery.scaled_image_view)
+            elif self.view_state == 2:
+                print("view state 1")
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
-                scaled_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
+                scaled_fullscreen_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
                 fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.tabs)
-                fullscreen_pixmap.setPixmap(scaled_pixmap)
-                fullscreen_pixmap.is_fullscreen = True
+                fullscreen_pixmap.setPixmap(scaled_fullscreen_pixmap)
+                fullscreen_pixmap.view_state = 3
                 self.gallery.full_image_view.addItem(fullscreen_pixmap)
                 self.gallery.centerOn(0, 0)
                 self.gallery.setScene(self.gallery.full_image_view)
+            elif self.view_state == 3:
+                print("view state 3")
+                self.gallery.setScene(self.gallery.gallery)
+                self.gallery.centerOn(0, 0)
+
         elif event.button() == Qt.RightButton:
             self.show_context_menu(event.screenPos())
 
@@ -45,10 +61,12 @@ class ClickablePixmap(QGraphicsPixmapItem):
         save_action = menu.addAction("Save Image As...")
         copy_action = menu.addAction("Copy Image")
         sdxl_menu = menu.addMenu("SDXL")
+        sdxl_inpaint_menu = menu.addMenu("SDXL Inpaint")
         flux_menu = menu.addMenu("Flux")
         sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
         sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
         sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
+        sdxl_send_to_inpaint = sdxl_inpaint_menu.addAction("Send to SDXL Inpaint")
         flux_send_to_i2i = flux_menu.addAction("Send to I2I")
         flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
         flux_sent_to_controlnet = flux_menu.addAction("Send to Controlnet")
@@ -70,6 +88,9 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if action == sdxl_sent_to_controlnet:
             self.sdxl_tab.controlnet_image_label.input_image = self.original_pixmap
             self.sdxl_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+
+        if action == sdxl_send_to_inpaint:
+            self.sdxl_inpaint_tab.paint_area.set_image(self.original_pixmap)
 
         if action == flux_send_to_i2i:
             self.flux_tab.i2i_image_label.input_image = self.original_pixmap
@@ -148,6 +169,7 @@ class ImageGalleryViewer(QGraphicsView):
         self.parent = parent
         self.top_layout = top_layout
         self.gallery = QGraphicsScene()
+        self.scaled_image_view = QGraphicsScene()
         self.full_image_view = QGraphicsScene()
         self.setScene(self.gallery)
 
@@ -205,8 +227,77 @@ class ImageInputBox(QHBoxLayout):
 
     def load_image(self):
         self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
-        self.input_image = QPixmap(self.image_file_path)
-        self.image_view.add_pixmap(self.input_image)
+        if self.image_file_path != "":
+            self.input_image = QPixmap(self.image_file_path)
+            self.image_view.add_pixmap(self.input_image)
+
+class PainterWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.input_image = QPixmap("assets/chili.png")
+        self.original_image = self.input_image
+        self.mask_pixmap = QPixmap(self.input_image.size())
+        self.mask_pixmap.fill(QColor(0, 0, 0, 0))
+        self.original_mask = self.mask_pixmap
+
+        self.previous_pos = None
+        self.painter = QPainter()
+        self.pen = QPen()
+        self.pen.setWidth(10)
+        self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        self.pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        self.pen.setColor(Qt.GlobalColor.white)
+
+    def paintEvent(self, event: QPaintEvent):
+        with QPainter(self) as painter:
+            painter.drawPixmap(0, 0, self.input_image)
+            painter.drawPixmap(0, 0, self.mask_pixmap)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        self.previous_pos = event.position().toPoint()
+        QWidget.mousePressEvent(self, event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        current_pos = event.position().toPoint()
+        self.painter.begin(self.mask_pixmap)
+        self.painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)
+        self.painter.setPen(self.pen)
+        self.painter.drawLine(self.previous_pos, current_pos)
+        self.painter.end()
+        self.original_mask = self.mask_pixmap.scaledToWidth(self.input_image.width())
+        self.previous_pos = current_pos
+        self.update()
+
+        QWidget.mouseMoveEvent(self, event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self.previous_pos = None
+        QWidget.mouseReleaseEvent(self, event)
+
+    def clear(self):
+        self.mask_pixmap.fill(QColor(0, 0, 0, 0))
+        self.update()
+
+    def resizeEvent(self, event):
+        self.resize_image()
+        super().resizeEvent(event)
+
+    def resize_image(self):
+        self.input_image = self.original_image.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.mask_pixmap = self.original_mask.scaled(self.input_image.size(), Qt.KeepAspectRatio,
+                                                     Qt.SmoothTransformation)
+
+    def load_image(self):
+        self.image_file_path = QFileDialog.getOpenFileName(self, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
+        if self.image_file_path != "":
+            self.original_image = QPixmap(self.image_file_path)
+            self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
+            self.resize_image()
+
+    def set_image(self, pixmap):
+        self.original_image = pixmap
+        self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
+        self.resize_image()
 
 
 class ParagraphInputBox(QVBoxLayout):
