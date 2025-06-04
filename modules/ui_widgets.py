@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
                                QFrame, QSizePolicy, QScrollArea)
-from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor
+from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor
 from PySide6.QtCore import Qt, QSize
 
 
@@ -255,6 +255,16 @@ class PainterWidget(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         self.previous_pos = event.position().toPoint()
+
+        self.painter.begin(self.mask_pixmap)
+        self.painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)
+        self.painter.setPen(self.pen)
+        self.painter.drawPoint(self.previous_pos)
+        self.painter.end()
+
+        self.original_mask = self.mask_pixmap.scaledToWidth(self.input_image.width())
+        self.update()
+
         QWidget.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -298,6 +308,34 @@ class PainterWidget(QWidget):
         self.original_image = pixmap
         self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
         self.resize_image()
+
+    def update_cursor(self):
+        size = self.pen.width() * 2
+        diameter = size
+        hotspot_offset = diameter // 2
+
+        pixmap = QPixmap(diameter + 2, diameter + 2)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(Qt.GlobalColor.black)
+        pen.setWidth(1)
+        painter.setPen(pen)
+        painter.setBrush(Qt.GlobalColor.white)
+        painter.drawEllipse(1, 1, diameter, diameter)
+        painter.end()
+
+        cursor = QCursor(pixmap, hotspot_offset + 1, hotspot_offset + 1)
+        self.setCursor(cursor)
+
+    def enterEvent(self, event):
+        self.update_cursor()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.unsetCursor()
+        super().leaveEvent(event)
 
 
 class ParagraphInputBox(QVBoxLayout):
