@@ -18,7 +18,6 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 # TODO:
 
 - Add model selection
-- Add support for inpainting
 - Add video pipelines
 - Add Audio Pipelines
 - Allow loading multiple loras

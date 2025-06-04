@@ -15,6 +15,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         self.sdxl_tab = self.tabs.widget(3)
         self.sdxl_inpaint_tab = self.tabs.widget(4)
         self.flux_tab = self.tabs.widget(5)
+        self.flux_inpaint_tab = self.tabs.widget(6)
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
@@ -24,9 +25,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            print(self.view_state)
             if self.view_state == 1:
-                print("view state 1")
                 width = self.gallery.viewport().width()
                 height = self.gallery.viewport().height()
                 self.gallery.scaled_image_view.clear()
@@ -38,7 +37,6 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 self.gallery.centerOn(0, 0)
                 self.gallery.setScene(self.gallery.scaled_image_view)
             elif self.view_state == 2:
-                print("view state 1")
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
                 scaled_fullscreen_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
@@ -49,7 +47,6 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 self.gallery.centerOn(0, 0)
                 self.gallery.setScene(self.gallery.full_image_view)
             elif self.view_state == 3:
-                print("view state 3")
                 self.gallery.setScene(self.gallery.gallery)
                 self.gallery.centerOn(0, 0)
 
@@ -63,6 +60,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         sdxl_menu = menu.addMenu("SDXL")
         sdxl_inpaint_menu = menu.addMenu("SDXL Inpaint")
         flux_menu = menu.addMenu("Flux")
+        flux_inpaint_menu = menu.addMenu("Flux Inpaint")
         sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
         sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
         sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
@@ -70,6 +68,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         flux_send_to_i2i = flux_menu.addAction("Send to I2I")
         flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
         flux_sent_to_controlnet = flux_menu.addAction("Send to Controlnet")
+        flux_send_to_inpaint = flux_inpaint_menu.addAction("Send to Flux Inpaint")
 
 
         action = menu.exec(global_pos)
@@ -101,6 +100,9 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if action == flux_sent_to_controlnet:
             self.flux_tab.controlnet_image_label.input_image = self.original_pixmap
             self.flux_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+
+        if action == flux_send_to_inpaint:
+            self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -243,7 +245,7 @@ class PainterWidget(QWidget):
         self.previous_pos = None
         self.painter = QPainter()
         self.pen = QPen()
-        self.pen.setWidth(10)
+        self.pen.setWidth(40)
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         self.pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         self.pen.setColor(Qt.GlobalColor.white)
