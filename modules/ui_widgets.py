@@ -314,7 +314,6 @@ class QueueObjectWidget(QFrame):
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.setFrameShape(QFrame.Shape.Box)
         self.setLineWidth(1)
-
         self.queue_object = queue_object
         self.hex_color = hex_color
         self.request_queue = request_queue
@@ -322,6 +321,7 @@ class QueueObjectWidget(QFrame):
 
         self.main_layout = QHBoxLayout(self)
         self.main_layout.setContentsMargins(2, 2, 2, 2)
+        self.main_layout.setSpacing(0)
 
         self.prompt_layout = QVBoxLayout()
         self.prompt_layout.setAlignment(Qt.AlignTop)
