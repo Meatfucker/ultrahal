@@ -28,6 +28,7 @@ class SdxlTab(QWidget):
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="5.0")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
@@ -55,6 +56,7 @@ class SdxlTab(QWidget):
         self.config_widgets_layout.addLayout(self.height_label)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
+        self.config_widgets_layout.addLayout(self.guidance_scale_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.image_input_layout.addLayout(self.i2i_layout)
@@ -81,6 +83,7 @@ class SdxlTab(QWidget):
         height = self.height_label.input.text()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
+        guidance_scale = self.guidance_scale_label.input.text()
         lora_name = self.lora_list.currentText()
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
@@ -113,6 +116,7 @@ class SdxlTab(QWidget):
                                   height=height,
                                   steps=steps,
                                   batch_size=batch_size,
+                                  guidance_scale=guidance_scale,
                                   lora_name=lora_name,
                                   strength=strength,
                                   ip_adapter_strength=ip_adapter_strength,
@@ -147,9 +151,10 @@ class SdxlTab(QWidget):
             self.controlnet_list.addItem(controlnet)
 
 class SDXLRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size, lora_name,
-                 strength, ip_adapter_strength, controlnet_strength, controlnet_processor, i2i_image_enabled,
-                 i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt):
+    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                 lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength, controlnet_processor,
+                 i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled,
+                 controlnet_image, enhance_prompt):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -159,6 +164,7 @@ class SDXLRequest:
         self.height = height
         self.steps = steps
         self.batch_size = batch_size
+        self.guidance_scale = guidance_scale
         self.lora_name = lora_name
         self.strength = strength
         self.ip_adapter_strength = ip_adapter_strength
@@ -194,6 +200,7 @@ class SDXLRequest:
         if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
+        if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.lora_name != "<None>": kwargs["lora_name"] = str(self.lora_name)
         kwargs["width"] = int(self.width)
         kwargs["height"] = int(self.height)

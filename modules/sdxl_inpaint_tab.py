@@ -35,6 +35,7 @@ class SdxlInpaintTab(QWidget):
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.5")
 
         self.paint_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
@@ -55,6 +56,7 @@ class SdxlInpaintTab(QWidget):
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
+        self.config_widgets_layout.addLayout(self.guidance_scale_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.main_layout.addLayout(self.paint_layout, stretch=4)
@@ -67,6 +69,7 @@ class SdxlInpaintTab(QWidget):
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
+        guidance_scale = self.guidance_scale_label.input.text()
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
@@ -80,6 +83,7 @@ class SdxlInpaintTab(QWidget):
                                          negative_prompt=negative_prompt,
                                          steps=steps,
                                          batch_size=batch_size,
+                                         guidance_scale=guidance_scale,
                                          enhance_prompt=enhance_prompt,
                                          width=width,
                                          height=height,
@@ -97,7 +101,8 @@ class SdxlInpaintTab(QWidget):
 
 
 class SDXLInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, enhance_prompt, width, height, image, mask_image, strength):
+    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, guidance_scale,
+                 enhance_prompt, width, height, image, mask_image, strength):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -105,6 +110,7 @@ class SDXLInpaintRequest:
         self.negative_prompt = negative_prompt
         self.steps = steps
         self.batch_size = batch_size
+        self.guidance_scale = guidance_scale
         self.enhance_prompt = enhance_prompt
         self.queue_info = None
         self.image = image
@@ -130,6 +136,7 @@ class SDXLInpaintRequest:
         if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
+        if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
         self.image.save("temp.png", quality=100)
         image = image_to_base64("temp.png", self.width, self.height)
         kwargs["image"] = str(image)
