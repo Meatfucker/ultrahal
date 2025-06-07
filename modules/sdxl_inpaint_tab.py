@@ -9,10 +9,9 @@ from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInput
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlInpaintTab(QWidget):
-    def __init__(self, avernus_client, request_queue, tabs):
+    def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.request_queue = request_queue
         self.tabs = tabs
         self.gallery_tab = self.tabs.widget(0)
         self.gallery = self.gallery_tab.gallery
@@ -90,9 +89,10 @@ class SdxlInpaintTab(QWidget):
                                          image=self.paint_area.original_image,
                                          mask_image=self.paint_area.original_mask,
                                          strength=strength)
-            queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#005500")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#334E74")
             request.ui_item = queue_item
-            await self.request_queue.put(request)
+            self.tabs.parent().pending_requests.append(request)
+            self.tabs.parent().request_event.set()
         except Exception as e:
             print(f"SDXL INPAINT on_submit EXCEPTION: {e}")
 
@@ -166,8 +166,6 @@ class SDXLInpaintRequest:
 
     @asyncSlot()
     async def display_images(self, images):
-        if self.gallery.clear_gallery_checkbox.isChecked():
-            self.gallery.gallery.gallery.clear()
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())

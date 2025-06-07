@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
-                               QFrame, QSizePolicy, QScrollArea)
+                               QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog)
 from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor
 from PySide6.QtCore import Qt, QSize
 
@@ -154,15 +154,21 @@ class ImageGallery(QVBoxLayout):
         super().__init__()
         self.parent = parent
         self.column_slider = HorizontalSlider("Gallery Columns", 1, 10, 4, 1)
-        self.clear_gallery_checkbox = QCheckBox("Clear Gallery")
+        self.clear_gallery_button = QPushButton("Clear Gallery")
+        self.clear_gallery_button.clicked.connect(self.clear_gallery)
         self.gallery = ImageGalleryViewer(self, self.parent)
         self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
 
         config_layout = QHBoxLayout()
         config_layout.addLayout(self.column_slider)
-        config_layout.addWidget(self.clear_gallery_checkbox)
+        config_layout.addWidget(self.clear_gallery_button)
         self.addLayout(config_layout)
         self.addWidget(self.gallery)
+
+    def clear_gallery(self):
+        self.gallery.gallery.clear()
+        self.gallery.tile_images()
+        self.update()
 
 
 class ImageGalleryViewer(QGraphicsView):
@@ -232,6 +238,7 @@ class ImageInputBox(QHBoxLayout):
         if self.image_file_path != "":
             self.input_image = QPixmap(self.image_file_path)
             self.image_view.add_pixmap(self.input_image)
+
 
 class PainterWidget(QWidget):
     def __init__(self, parent=None):
@@ -349,14 +356,13 @@ class ParagraphInputBox(QVBoxLayout):
         self.addWidget(self.input)
 
 class QueueObjectWidget(QFrame):
-    def __init__(self, queue_object, hex_color, request_queue, queue_view):
+    def __init__(self, queue_object, hex_color, queue_view):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.setFrameShape(QFrame.Shape.Box)
         self.setLineWidth(1)
         self.queue_object = queue_object
         self.hex_color = hex_color
-        self.request_queue = request_queue
         self.queue_view = queue_view
 
         self.main_layout = QHBoxLayout(self)
@@ -377,6 +383,13 @@ class QueueObjectWidget(QFrame):
         self.status_container.setStyleSheet(f"color: #ffffff; background-color: #444400;")
         self.status_container.setLayout(self.status_layout)
 
+        self.button_layout = QVBoxLayout()
+        self.button_layout.setContentsMargins(0, 0, 0, 0)
+        self.remove_button = QPushButton("Remove")
+        self.remove_button.clicked.connect(self.remove_from_queue)
+        self.info_button = QPushButton("Info")
+        self.info_button.clicked.connect(self.info)
+
         if self.queue_object.queue_info:
             self.type_label = QLabel(f"{self.queue_object.__class__.__name__} | {self.queue_object.queue_info}")
         else:
@@ -388,11 +401,26 @@ class QueueObjectWidget(QFrame):
 
         self.main_layout.addWidget(self.prompt_container, stretch=20)
         self.main_layout.addWidget(self.status_container)
+        self.main_layout.addLayout(self.button_layout)
         self.prompt_layout.addWidget(self.type_label)
         self.prompt_layout.addWidget(self.prompt_separator)
         self.prompt_layout.addWidget(self.prompt_label)
         self.status_layout.addWidget(self.status_label)
+        self.button_layout.addWidget(self.remove_button)
+        self.button_layout.addWidget(self.info_button)
 
+    def info(self):
+        prompt = getattr(self.queue_object, "enhanced_prompt", None)
+        if prompt and str(prompt).strip():
+            QMessageBox.information(self, "Info", str(prompt))
+        else:
+            QMessageBox.information(self, "Info", "No enhanced prompt found")
+
+    def remove_from_queue(self):
+
+        if self.queue_object in self.queue_view.parent().parent().parent().parent().pending_requests:
+            self.queue_view.parent().parent().parent().parent().pending_requests.remove(self.queue_object)
+        self.queue_view.del_queue_item(self)
 
 class QueueViewer(QScrollArea):
     def __init__(self):
@@ -405,13 +433,15 @@ class QueueViewer(QScrollArea):
         self.main_layout.setAlignment(Qt.AlignTop)
         self.main_layout.addStrut(250)
 
-    def add_queue_item(self, queue_item, request_queue, queue_view, hex_color):
-        queue_widget = QueueObjectWidget(queue_item, hex_color, request_queue, queue_view)
+    def add_queue_item(self, queue_item, queue_view, hex_color):
+        queue_widget = QueueObjectWidget(queue_item, hex_color, queue_view)
         self.main_layout.addWidget(queue_widget)
         return queue_widget
 
-    def del_queue_item(self, queue_item):
-        self.main_layout.removeWidget(queue_item)
+    def del_queue_item(self, queue_widget):
+        self.main_layout.removeWidget(queue_widget)
+        queue_widget.setParent(None)
+        queue_widget.deleteLater()
 
 
 class ScalingImageView(QGraphicsView):

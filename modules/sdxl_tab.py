@@ -8,10 +8,9 @@ from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBo
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlTab(QWidget):
-    def __init__(self, avernus_client, request_queue, tabs):
+    def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.request_queue = request_queue
         self.tabs = tabs
         self.gallery_tab = self.tabs.widget(0)
         self.gallery = self.gallery_tab.gallery
@@ -129,9 +128,11 @@ class SdxlTab(QWidget):
                                   controlnet_enabled=controlnet_enable,
                                   controlnet_image=controlnet_image,
                                   enhance_prompt=enhance_prompt)
-            queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#003300")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1E3A5F")
             request.ui_item = queue_item
-            await self.request_queue.put(request)
+            self.tabs.parent().pending_requests.append(request)
+            self.tabs.parent().request_event.set()
+
         except Exception as e:
             print(f"SDXL on_submit EXCEPTION: {e}")
 
@@ -244,9 +245,6 @@ class SDXLRequest:
 
     @asyncSlot()
     async def display_images(self, images):
-        if self.gallery.clear_gallery_checkbox.isChecked():
-            self.gallery.gallery.gallery.clear()
-
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())

@@ -8,10 +8,9 @@ from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBo
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxTab(QWidget):
-    def __init__(self, avernus_client, request_queue, tabs):
+    def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.request_queue = request_queue
         self.tabs = tabs
         self.gallery_tab = self.tabs.widget(0)
         self.gallery = self.gallery_tab.gallery
@@ -117,9 +116,10 @@ class FluxTab(QWidget):
                                   controlnet_enabled=controlnet_enable,
                                   controlnet_image=controlnet_image,
                                   enhance_prompt=enhance_prompt)
-            queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#000055")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1A103D")
             request.ui_item = queue_item
-            await self.request_queue.put(request)
+            self.tabs.parent().pending_requests.append(request)
+            self.tabs.parent().request_event.set()
         except Exception as e:
             print(f"SDXL on_submit EXCEPTION: {e}")
 
@@ -127,14 +127,14 @@ class FluxTab(QWidget):
     async def make_lora_list(self):
         self.lora_list.clear()
         self.lora_list.addItem("<None>")
-        loras = await self.avernus_client.list_sdxl_loras()
+        loras = await self.avernus_client.list_flux_loras()
         for lora in loras:
             self.lora_list.addItem(lora)
 
     @asyncSlot()
     async def make_controlnet_list(self):
         self.controlnet_list.clear()
-        controlnets = await self.avernus_client.list_sdxl_controlnets()
+        controlnets = await self.avernus_client.list_flux_controlnets()
         for controlnet in controlnets:
             self.controlnet_list.addItem(controlnet)
 
@@ -224,8 +224,6 @@ class FluxRequest:
 
     @asyncSlot()
     async def display_images(self, images):
-        if self.gallery.clear_gallery_checkbox.isChecked():
-            self.gallery.gallery.gallery.clear()
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())

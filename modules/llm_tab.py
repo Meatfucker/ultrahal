@@ -4,10 +4,9 @@ from modules.ui_widgets import SingleLineInputBox
 
 
 class LlmTab(QWidget):
-    def __init__(self, avernus_client, request_queue, tabs):
+    def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client = avernus_client
-        self.request_queue = request_queue
         self.tabs = tabs
         self.queue_tab = self.tabs.widget(1)
         self.queue_view = self.queue_tab.queue_view
@@ -45,9 +44,11 @@ class LlmTab(QWidget):
         input_text = self.text_input.toPlainText()
         model_name = self.model_repo_label.input.text()
         request = LLMRequest(self.avernus_client, self, input_text, model_name)
-        queue_item = self.queue_view.add_queue_item(request, self.request_queue, self.queue_view, "#333300")
+
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#3F1507")
         request.ui_item = queue_item
-        await self.request_queue.put(request)
+        self.tabs.parent().pending_requests.append(request)
+        self.tabs.parent().request_event.set()
 
     async def add_history(self, role, content):
         """Adds each message to the history."""

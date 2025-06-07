@@ -23,7 +23,8 @@ class MainWindow(QWidget):
         self.avernus_url = "localhost"
         self.avernus_client = AvernusClient(self.avernus_url)
         self.loop = qasync.QEventLoop(self)
-        self.request_queue = asyncio.Queue()
+        self.pending_requests = []
+        self.request_event = asyncio.Event()
         self.request_currently_processing = False
         self.process_request_queue()
 
@@ -41,11 +42,11 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.gallery_tab, "Gallery")
         self.tabs.addTab(self.queue_tab, "Queue")
 
-        self.llm_chat_tab = LlmTab(self.avernus_client, self.request_queue, self.tabs)
-        self.sdxl_tab = SdxlTab(self.avernus_client, self.request_queue, self.tabs)
-        self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.request_queue, self.tabs)
-        self.flux_tab = FluxTab(self.avernus_client, self.request_queue, self.tabs)
-        self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.request_queue, self.tabs)
+        self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
+        self.sdxl_tab = SdxlTab(self.avernus_client, self.tabs)
+        self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
+        self.flux_tab = FluxTab(self.avernus_client, self.tabs)
+        self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -83,15 +84,18 @@ class MainWindow(QWidget):
 
     @asyncSlot()
     async def process_request_queue(self):
-        """Processes the request queue objects"""
         while True:
-            queue_request = await self.request_queue.get()
-            try:
-                await queue_request.run()
-            except Exception as e:
-                print(f"Exception: {e}")
-            finally:
-                self.request_queue.task_done()
+            # Wait for a new event or retry if queue isn't empty
+            if not self.pending_requests:
+                await self.request_event.wait()
+                self.request_event.clear()
+
+            while self.pending_requests:
+                queue_request = self.pending_requests.pop(0)
+                try:
+                    await queue_request.run()
+                except Exception as e:
+                    print(f"Exception while processing request: {e}")
 
 
 if __name__ == "__main__":
