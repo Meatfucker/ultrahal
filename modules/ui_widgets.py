@@ -1,8 +1,11 @@
+import json
+import os
 import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
-                               QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog)
-from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor
+                               QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout, QLayout, QComboBox,
+                               QInputDialog)
+from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont
 from PySide6.QtCore import Qt, QSize
 
 
@@ -16,6 +19,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         self.sdxl_inpaint_tab = self.tabs.widget(4)
         self.flux_tab = self.tabs.widget(5)
         self.flux_inpaint_tab = self.tabs.widget(6)
+        self.flux_fill_tab = self.tabs.widget(7)
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
@@ -69,6 +73,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
         flux_sent_to_controlnet = flux_menu.addAction("Send to Controlnet")
         flux_send_to_inpaint = flux_inpaint_menu.addAction("Send to Flux Inpaint")
+        flux_send_to_fill = flux_inpaint_menu.addAction("Send to Flux Fill")
 
 
         action = menu.exec(global_pos)
@@ -103,6 +108,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
 
         if action == flux_send_to_inpaint:
             self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
+        if action == flux_send_to_fill:
+            self.flux_fill_tab.paint_area.set_image(self.original_pixmap)
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -239,6 +246,113 @@ class ImageInputBox(QHBoxLayout):
             self.input_image = QPixmap(self.image_file_path)
             self.image_view.add_pixmap(self.input_image)
 
+class ModelPickerWidget(QVBoxLayout):
+    def __init__(self, model_arch):
+        super().__init__()
+        self.data_list = []
+        self.model_arch = model_arch
+        self.json_path = f"{self.model_arch}.json"
+
+        # Load or create the JSON file
+        if os.path.exists(self.json_path):
+            try:
+                with open(self.json_path, "r") as f:
+                    self.data_list = json.load(f)
+            except json.JSONDecodeError:
+                QMessageBox.warning(None, "Load Error", f"Failed to parse {self.json_path}. Starting fresh.")
+                self.data_list = []
+        else:
+            self._save_model_list()  # Create blank file if it doesn't exist
+
+        self.model_list_picker = QComboBox()
+        self.model_list_picker.insertItems(0, self.data_list)
+        self.addWidget(self.model_list_picker)
+
+        self.button_layout = QHBoxLayout()
+        self.add_model_button = QPushButton("Add Model")
+        self.add_model_button.clicked.connect(self.add_model)
+        self.remove_model_button = QPushButton("Remove Model")
+        self.remove_model_button.clicked.connect(self.remove_model)
+        self.button_layout.addWidget(self.add_model_button)
+        self.button_layout.addWidget(self.remove_model_button)
+
+        self.addLayout(self.button_layout)
+
+    def add_model(self):
+        text, ok = QInputDialog.getText(None, "Add Model", "Enter model name:")
+        if ok and text.strip():
+            model_name = text.strip()
+            if model_name in self.data_list:
+                QMessageBox.warning(None, "Duplicate Model", f"'{model_name}' already exists.")
+                return
+            self.data_list.append(model_name)
+            self.model_list_picker.addItem(model_name)
+            self._save_model_list()
+
+    def _save_model_list(self):
+        with open(f"{self.model_arch}.json", "w") as f:
+            json.dump(self.data_list, f, indent=2)
+
+    def remove_model(self):
+        current_index = self.model_list_picker.currentIndex()
+        if current_index == -1:
+            QMessageBox.information(None, "No Selection", "Please select a model to remove.")
+            return
+
+        model_name = self.model_list_picker.currentText()
+        confirm = QMessageBox.question(
+            None,
+            "Remove Model",
+            f"Are you sure you want to remove '{model_name}'?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if confirm == QMessageBox.Yes:
+            self.model_list_picker.removeItem(current_index)
+            self.data_list.remove(model_name)
+            self._save_model_list()
+
+
+class OutpaintingWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        layout = QGridLayout()
+        layout.setSpacing(1)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+
+        align_northwest_button = SquareButton("↖")
+        align_north_button = SquareButton("🡩")
+        align_northeast_button = SquareButton("↗")
+        align_west_button = SquareButton("←")
+        align_center_button = SquareButton("O")
+        align_east_button = SquareButton("→")
+        align_southwest_button = SquareButton("↙")
+        align_south_button = SquareButton("↓")
+        align_southeast_button = SquareButton("↘")
+
+        align_northwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_north_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_northeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_west_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_center_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_east_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_southwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_south_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        align_southeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        layout.addWidget(align_northwest_button, 0 ,0)
+        layout.addWidget(align_north_button, 0, 1)
+        layout.addWidget(align_northeast_button, 0, 2)
+        layout.addWidget(align_west_button, 1, 0)
+        layout.addWidget(align_center_button, 1, 1)
+        layout.addWidget(align_east_button, 1, 2)
+        layout.addWidget(align_southwest_button, 2, 0)
+        layout.addWidget(align_south_button, 2, 1)
+        layout.addWidget(align_southeast_button, 2, 2)
+
+        self.setLayout(layout)
+
 
 class PainterWidget(QWidget):
     def __init__(self, parent=None):
@@ -359,8 +473,7 @@ class QueueObjectWidget(QFrame):
     def __init__(self, queue_object, hex_color, queue_view):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        self.setFrameShape(QFrame.Shape.Box)
-        self.setLineWidth(1)
+        self.setFrameShape(QFrame.Shape.StyledPanel)
         self.queue_object = queue_object
         self.hex_color = hex_color
         self.queue_view = queue_view
@@ -485,3 +598,16 @@ class SingleLineInputBox(QHBoxLayout):
             self.input = QLineEdit()
         self.addWidget(self.label)
         self.addWidget(self.input)
+
+class SquareButton(QPushButton):
+    def __init__(self, text, font_size=16):  # Default font size
+        super().__init__(text)
+
+        font = QFont()
+        font.setPointSize(font_size)
+        self.setFont(font)
+
+    def sizeHint(self):
+        #size = super().sizeHint()
+        #side = max(size.width(), size.height())
+        return QSize(20, 20)

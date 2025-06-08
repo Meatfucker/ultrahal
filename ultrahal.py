@@ -6,8 +6,9 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
 from qasync import QEventLoop, asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.flux_tab import FluxTab
+from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
+from modules.flux_tab import FluxTab
 from modules.llm_tab import LlmTab
 from modules.gallery import GalleryTab
 from modules.sdxl_tab import SdxlTab
@@ -47,6 +48,7 @@ class MainWindow(QWidget):
         self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
+        self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -60,6 +62,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
+        self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
 
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)
@@ -79,8 +82,13 @@ class MainWindow(QWidget):
         print(status)
         await self.sdxl_tab.make_lora_list()
         await self.sdxl_tab.make_controlnet_list()
+        await self.sdxl_tab.make_scheduler_list()
+        await self.sdxl_inpaint_tab.make_lora_list()
+        await self.sdxl_inpaint_tab.make_scheduler_list()
         await self.flux_tab.make_lora_list()
         await self.flux_tab.make_controlnet_list()
+        await self.flux_inpaint_tab.make_lora_list()
+        await self.flux_fill_tab.make_lora_list()
 
     @asyncSlot()
     async def process_request_queue(self):

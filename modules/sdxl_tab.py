@@ -1,10 +1,11 @@
 import asyncio
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QListWidget, QListWidgetItem,
+                                QPushButton, QVBoxLayout, QWidget)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, SingleLineInputBox
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlTab(QWidget):
@@ -21,13 +22,17 @@ class SdxlTab(QWidget):
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
-        self.lora_list = QComboBox()
+        self.model_picker = ModelPickerWidget("sdxl")
+        self.scheduler_list = QComboBox()
+        self.lora_list = QListWidget()
+        self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="5.0")
+        self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
@@ -36,19 +41,21 @@ class SdxlTab(QWidget):
         self.controlnet_list = QComboBox()
         self.controlnet_conditioning_scale = HorizontalSlider("Strength", 0, 100, 50, enable_ticks=False)
 
-        self.config_layout = QHBoxLayout()
+        self.main_layout = QHBoxLayout()
+        self.input_layout = QVBoxLayout()
+        self.prompt_layout = QHBoxLayout()
         self.config_widgets_layout = QVBoxLayout()
         self.config_widgets_layout.setAlignment(Qt.AlignTop)
         self.image_input_layout = QHBoxLayout()
         self.i2i_layout = QVBoxLayout()
         self.ip_adapter_layout = QVBoxLayout()
         self.controlnet_layout = QVBoxLayout()
-        self.main_layout = QVBoxLayout()
 
-        self.config_layout.addLayout(self.prompt_label)
-        self.config_layout.addLayout(self.negative_prompt_label)
-        self.config_layout.addLayout(self.config_widgets_layout)
+        self.prompt_layout.addLayout(self.prompt_label)
+        self.prompt_layout.addLayout(self.negative_prompt_label)
 
+        self.config_widgets_layout.addLayout(self.model_picker)
+        self.config_widgets_layout.addWidget(self.scheduler_list)
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addLayout(self.width_label)
@@ -56,6 +63,7 @@ class SdxlTab(QWidget):
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
+        self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.image_input_layout.addLayout(self.i2i_layout)
@@ -70,8 +78,11 @@ class SdxlTab(QWidget):
         self.controlnet_layout.addWidget(self.controlnet_list)
         self.controlnet_layout.addLayout(self.controlnet_conditioning_scale)
 
-        self.main_layout.addLayout(self.config_layout, stretch=1)
-        self.main_layout.addLayout(self.image_input_layout, stretch=1)
+        self.input_layout.addLayout(self.prompt_layout, stretch=1)
+        self.input_layout.addLayout(self.image_input_layout, stretch=1)
+
+        self.main_layout.addLayout(self.input_layout)
+        self.main_layout.addLayout(self.config_widgets_layout)
         self.setLayout(self.main_layout)
 
     @asyncSlot()
@@ -83,7 +94,16 @@ class SdxlTab(QWidget):
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
-        lora_name = self.lora_list.currentText()
+        seed = self.seed_label.input.text()
+        model_name = self.model_picker.model_list_picker.currentText()
+        scheduler = self.scheduler_list.currentText()
+        lora_items = self.lora_list.selectedItems()
+        lora_name = "<None>"
+        if lora_items:
+            lora_name = []
+            for lora_list_item in lora_items:
+                lora_name.append(lora_list_item.text())
+
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
         controlnet_strength = round(float(self.controlnet_conditioning_scale.slider.value() * 0.01), 2)
@@ -127,22 +147,22 @@ class SdxlTab(QWidget):
                                   ip_adapter_image=ip_adapter_image,
                                   controlnet_enabled=controlnet_enable,
                                   controlnet_image=controlnet_image,
-                                  enhance_prompt=enhance_prompt)
+                                  enhance_prompt=enhance_prompt,
+                                  model_name=model_name,
+                                  scheduler=scheduler,
+                                  seed=seed)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1E3A5F")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
-
         except Exception as e:
             print(f"SDXL on_submit EXCEPTION: {e}")
 
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        self.lora_list.addItem("<None>")
         loras = await self.avernus_client.list_sdxl_loras()
-        for lora in loras:
-            self.lora_list.addItem(lora)
+        self.lora_list.insertItems(0, loras)
 
     @asyncSlot()
     async def make_controlnet_list(self):
@@ -151,11 +171,18 @@ class SdxlTab(QWidget):
         for controlnet in controlnets:
             self.controlnet_list.addItem(controlnet)
 
+    @asyncSlot()
+    async def make_scheduler_list(self):
+        self.scheduler_list.clear()
+        schedulers = await self.avernus_client.list_sdxl_schedulers()
+        for scheduler in schedulers:
+            self.scheduler_list.addItem(scheduler)
+
 class SDXLRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
                  lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength, controlnet_processor,
                  i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled,
-                 controlnet_image, enhance_prompt):
+                 controlnet_image, enhance_prompt, model_name, scheduler, seed):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -166,6 +193,9 @@ class SDXLRequest:
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
+        self.seed = seed
+        self.model_name = model_name
+        self.scheduler = scheduler
         self.lora_name = lora_name
         self.strength = strength
         self.ip_adapter_strength = ip_adapter_strength
@@ -202,7 +232,10 @@ class SDXLRequest:
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
-        if self.lora_name != "<None>": kwargs["lora_name"] = str(self.lora_name)
+        if self.seed != "": kwargs["seed"] = int(self.seed)
+        if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
+        kwargs["model_name"] = str(self.model_name)
+        kwargs["scheduler"] = str(self.scheduler)
         kwargs["width"] = int(self.width)
         kwargs["height"] = int(self.height)
 
@@ -249,7 +282,6 @@ class SDXLRequest:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
             self.gallery.gallery.add_pixmap(pixmap, self.tabs)
-
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe

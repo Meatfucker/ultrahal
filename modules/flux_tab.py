@@ -1,7 +1,8 @@
 import asyncio
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
+                                QListWidget)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox
@@ -20,12 +21,15 @@ class FluxTab(QWidget):
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
-        self.lora_list = QComboBox()
+        self.lora_list = QListWidget()
+        self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="3.5")
+        self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
@@ -33,17 +37,17 @@ class FluxTab(QWidget):
         self.controlnet_image_label = ImageInputBox(self, "Controlnet", "assets/chili.png")
         self.controlnet_list = QComboBox()
 
-        self.config_layout = QHBoxLayout()
+        self.main_layout = QHBoxLayout()
+        self.input_layout = QVBoxLayout()
+        self.prompt_layout = QHBoxLayout()
         self.config_widgets_layout = QVBoxLayout()
         self.config_widgets_layout.setAlignment(Qt.AlignTop)
         self.image_input_layout = QHBoxLayout()
         self.i2i_layout = QVBoxLayout()
         self.ip_adapter_layout = QVBoxLayout()
         self.controlnet_layout = QVBoxLayout()
-        self.main_layout = QVBoxLayout()
 
-        self.config_layout.addLayout(self.prompt_label)
-        self.config_layout.addLayout(self.config_widgets_layout)
+        self.prompt_layout.addLayout(self.prompt_label)
 
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
@@ -51,6 +55,8 @@ class FluxTab(QWidget):
         self.config_widgets_layout.addLayout(self.height_label)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
+        self.config_widgets_layout.addLayout(self.guidance_scale_label)
+        self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.image_input_layout.addLayout(self.i2i_layout)
@@ -64,8 +70,11 @@ class FluxTab(QWidget):
         self.controlnet_layout.addLayout(self.controlnet_image_label)
         self.controlnet_layout.addWidget(self.controlnet_list)
 
-        self.main_layout.addLayout(self.config_layout, stretch=1)
-        self.main_layout.addLayout(self.image_input_layout, stretch=1)
+        self.input_layout.addLayout(self.prompt_layout, stretch=1)
+        self.input_layout.addLayout(self.image_input_layout, stretch=1)
+
+        self.main_layout.addLayout(self.input_layout, stretch=5)
+        self.main_layout.addLayout(self.config_widgets_layout, stretch=2)
         self.setLayout(self.main_layout)
 
     @asyncSlot()
@@ -75,7 +84,14 @@ class FluxTab(QWidget):
         height = self.height_label.input.text()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
-        lora_name = self.lora_list.currentText()
+        guidance_scale = self.guidance_scale_label.input.text()
+        seed = self.seed_label.input.text()
+        lora_items = self.lora_list.selectedItems()
+        lora_name = "<None>"
+        if lora_items:
+            lora_name = []
+            for lora_list_item in lora_items:
+                lora_name.append(lora_list_item.text())
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
         controlnet_processor = self.controlnet_list.currentText()
@@ -115,7 +131,9 @@ class FluxTab(QWidget):
                                   ip_adapter_image=ip_adapter_image,
                                   controlnet_enabled=controlnet_enable,
                                   controlnet_image=controlnet_image,
-                                  enhance_prompt=enhance_prompt)
+                                  enhance_prompt=enhance_prompt,
+                                  guidance_scale=guidance_scale,
+                                  seed=seed)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1A103D")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -126,10 +144,8 @@ class FluxTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        self.lora_list.addItem("<None>")
         loras = await self.avernus_client.list_flux_loras()
-        for lora in loras:
-            self.lora_list.addItem(lora)
+        self.lora_list.insertItems(0, loras)
 
     @asyncSlot()
     async def make_controlnet_list(self):
@@ -140,7 +156,7 @@ class FluxTab(QWidget):
 
 class FluxRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
-                 strength, ip_adapter_strength, controlnet_processor, i2i_image_enabled,
+                 strength, ip_adapter_strength, controlnet_processor, i2i_image_enabled, guidance_scale, seed,
                  i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt):
         self.avernus_client = avernus_client
         self.gallery = gallery
@@ -150,6 +166,8 @@ class FluxRequest:
         self.height = height
         self.steps = steps
         self.batch_size = batch_size
+        self.guidance_scale = guidance_scale
+        self.seed = seed
         self.lora_name = lora_name
         self.strength = strength
         self.ip_adapter_strength = ip_adapter_strength
@@ -183,9 +201,12 @@ class FluxRequest:
         kwargs = {}
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
-        if self.lora_name != "<None>": kwargs["lora_name"] = str(self.lora_name)
+        if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
+        if self.seed != "": kwargs["seed"] = int(self.seed)
+        if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         kwargs["width"] = int(self.width)
         kwargs["height"] = int(self.height)
+
 
         if self.i2i_image_enabled is True:
             self.i2i_image.save("temp.png", quality=100)

@@ -2,7 +2,7 @@ import asyncio
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider
@@ -30,10 +30,13 @@ class FluxInpaintTab(QWidget):
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
+        self.lora_list = QListWidget()
+        self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
-        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.5")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.0")
+        self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
 
         self.paint_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
@@ -43,6 +46,7 @@ class FluxInpaintTab(QWidget):
 
         self.paint_layout.addWidget(self.paint_area)
 
+        self.config_layout.addWidget(self.lora_list)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addLayout(self.brush_size_slider)
         self.config_layout.addWidget(self.load_button)
@@ -54,6 +58,7 @@ class FluxInpaintTab(QWidget):
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
+        self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.main_layout.addLayout(self.paint_layout, stretch=4)
@@ -66,6 +71,13 @@ class FluxInpaintTab(QWidget):
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
+        seed = self.seed_label.input.text()
+        lora_items = self.lora_list.selectedItems()
+        lora_name = "<None>"
+        if lora_items:
+            lora_name = []
+            for lora_list_item in lora_items:
+                lora_name.append(lora_list_item.text())
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
@@ -79,6 +91,8 @@ class FluxInpaintTab(QWidget):
                                          steps=steps,
                                          batch_size=batch_size,
                                          guidance_scale=guidance_scale,
+                                         seed=seed,
+                                         lora_name=lora_name,
                                          enhance_prompt=enhance_prompt,
                                          width=width,
                                          height=height,
@@ -95,10 +109,15 @@ class FluxInpaintTab(QWidget):
     def set_brush_size(self):
         self.paint_area.pen.setWidth(int(self.brush_size_slider.slider.value()))
 
+    @asyncSlot()
+    async def make_lora_list(self):
+        self.lora_list.clear()
+        loras = await self.avernus_client.list_flux_loras()
+        self.lora_list.insertItems(0, loras)
 
 class FluxInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale,
-                 enhance_prompt, width, height, image, mask_image, strength):
+    def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale, seed,
+                 enhance_prompt, width, height, image, mask_image, strength, lora_name):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -106,6 +125,8 @@ class FluxInpaintRequest:
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
+        self.seed = seed
+        self.lora_name = lora_name
         self.enhance_prompt = enhance_prompt
         self.queue_info = None
         self.image = image
@@ -131,6 +152,8 @@ class FluxInpaintRequest:
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
+        if self.seed != "": kwargs["seed"] = int(self.seed)
+        if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         self.image.save("temp.png", quality=100)
         image = image_to_base64("temp.png", self.width, self.height)
         kwargs["image"] = str(image)

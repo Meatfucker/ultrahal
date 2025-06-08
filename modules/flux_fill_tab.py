@@ -2,14 +2,13 @@ import asyncio
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget,
-                                QComboBox)
+from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ModelPickerWidget
+from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, OutpaintingWidget
 from modules.utils import base64_to_images, image_to_base64
 
-class SdxlInpaintTab(QWidget):
+class FluxFillTab(QWidget):
     def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
@@ -21,8 +20,7 @@ class SdxlInpaintTab(QWidget):
 
         self.paint_area = PainterWidget()
 
-        self.model_picker = ModelPickerWidget("sdxl")
-        self.scheduler_list = QComboBox()
+        self.outpainting_controls = OutpaintingWidget()
         self.clear_mask_button = QPushButton("Clear Mask")
         self.clear_mask_button.clicked.connect(self.paint_area.clear)
         self.brush_size_slider = HorizontalSlider("Brush Size", 1, 200, 10, enable_ticks=False)
@@ -33,13 +31,12 @@ class SdxlInpaintTab(QWidget):
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.prompt_label = ParagraphInputBox("Prompt")
-        self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
-        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.5")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="30.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
 
         self.paint_layout = QVBoxLayout()
@@ -50,17 +47,14 @@ class SdxlInpaintTab(QWidget):
 
         self.paint_layout.addWidget(self.paint_area)
 
-        self.config_layout.addLayout(self.model_picker)
-        self.config_layout.addWidget(self.scheduler_list)
-        self.config_layout.addWidget(self.lora_list)
+        # self.prompt_layout.addWidget(self.lora_list) Loras seem to have no effect though they load. Disabled for now
+        self.config_layout.addWidget(self.outpainting_controls)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addLayout(self.brush_size_slider)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
         self.config_layout.addLayout(self.prompt_label)
-        self.config_layout.addLayout(self.negative_prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
-
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addLayout(self.steps_label)
@@ -76,13 +70,10 @@ class SdxlInpaintTab(QWidget):
     @asyncSlot()
     async def on_submit(self):
         prompt = self.prompt_label.input.toPlainText()
-        negative_prompt = self.negative_prompt_label.input.toPlainText()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
         seed = self.seed_label.input.text()
-        model_name = self.model_picker.model_list_picker.currentText()
-        scheduler = self.scheduler_list.currentText()
         lora_items = self.lora_list.selectedItems()
         lora_name = "<None>"
         if lora_items:
@@ -95,30 +86,27 @@ class SdxlInpaintTab(QWidget):
         strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
 
         try:
-            request = SDXLInpaintRequest(avernus_client=self.avernus_client,
-                                         gallery=self.gallery,
-                                         tabs=self.tabs,
-                                         prompt=prompt,
-                                         negative_prompt=negative_prompt,
-                                         steps=steps,
-                                         batch_size=batch_size,
-                                         guidance_scale=guidance_scale,
-                                         lora_name=lora_name,
-                                         enhance_prompt=enhance_prompt,
-                                         width=width,
-                                         height=height,
-                                         image=self.paint_area.original_image,
-                                         mask_image=self.paint_area.original_mask,
-                                         strength=strength,
-                                         model_name=model_name,
-                                         scheduler=scheduler,
-                                         seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#334E74")
+            request = FluxFillRequest(avernus_client=self.avernus_client,
+                                      gallery=self.gallery,
+                                      tabs=self.tabs,
+                                      prompt=prompt,
+                                      steps=steps,
+                                      batch_size=batch_size,
+                                      guidance_scale=guidance_scale,
+                                      lora_name=lora_name,
+                                      enhance_prompt=enhance_prompt,
+                                      width=width,
+                                      height=height,
+                                      image=self.paint_area.original_image,
+                                      mask_image=self.paint_area.original_mask,
+                                      strength=strength,
+                                      seed=seed)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#5F5482")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
         except Exception as e:
-            print(f"SDXL INPAINT on_submit EXCEPTION: {e}")
+            print(f"FLUX INPAINT on_submit EXCEPTION: {e}")
 
     def set_brush_size(self):
         self.paint_area.pen.setWidth(int(self.brush_size_slider.slider.value()))
@@ -126,30 +114,20 @@ class SdxlInpaintTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        loras = await self.avernus_client.list_sdxl_loras()
+        loras = await self.avernus_client.list_flux_loras()
         self.lora_list.insertItems(0, loras)
 
-    @asyncSlot()
-    async def make_scheduler_list(self):
-        self.scheduler_list.clear()
-        schedulers = await self.avernus_client.list_sdxl_schedulers()
-        for scheduler in schedulers:
-            self.scheduler_list.addItem(scheduler)
-
-
-class SDXLInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, guidance_scale,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, model_name, scheduler, seed):
+class FluxFillRequest:
+    def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale,
+                 enhance_prompt, width, height, image, mask_image, strength, lora_name, seed):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
-        self.negative_prompt = negative_prompt
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
-        self.model_name = model_name
-        self.scheduler = scheduler
+        self.seed = seed
         self.lora_name = lora_name
         self.enhance_prompt = enhance_prompt
         self.queue_info = None
@@ -158,7 +136,6 @@ class SDXLInpaintRequest:
         self.width = width
         self.height = height
         self.strength = strength
-        self.seed = seed
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -171,10 +148,9 @@ class SDXLInpaintRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"SDXL INPAINT: {self.prompt}, {self.negative_prompt}, {self.steps}, {self.batch_size}")
+        print(f"FLUX INPAINT: {self.prompt}, {self.steps}, {self.batch_size}")
 
         kwargs = {}
-        if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
@@ -189,25 +165,23 @@ class SDXLInpaintRequest:
         kwargs["width"] = self.width
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
-        kwargs["model_name"] = str(self.model_name)
-        kwargs["scheduler"] = str(self.scheduler)
 
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
-                base64_images = await self.avernus_client.sdxl_inpaint_image(self.enhanced_prompt, **kwargs)
+                base64_images = await self.avernus_client.flux_fill_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
-                print(f"SDXL INPAINT EXCEPTION: {e}")
+                print(f"FLUX INPAINT EXCEPTION: {e}")
         else:
             try:
-                base64_images = await self.avernus_client.sdxl_inpaint_image(self.prompt, **kwargs)
+                base64_images = await self.avernus_client.flux_fill_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
-                print(f"SDXL INPAINT EXCEPTION: {e}")
+                print(f"FLUX INPAINT EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):

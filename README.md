@@ -17,9 +17,9 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 # TODO:
 
-- Add model selection
+- Add model selection to llm tab
 - Add video pipelines
 - Add Audio Pipelines
-- Allow loading multiple loras
 - Add options for sorting the gallery
 - add random artist thing
+- add clear queue option/options

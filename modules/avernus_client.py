@@ -24,19 +24,22 @@ class AvernusClient:
             return {"ERROR": str(e)}
 
     async def flux_fill_image(self, prompt, image=None, model_name=None, width=None,
-                              height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None, strength=None):
+                              height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None,
+                              strength=None, lora_name=None, seed=None):
         """This takes a prompt, and optional other variables and returns a list of base64 encoded images"""
         url = f"http://{self.base_url}/flux_fill_generate"
         data = {"prompt": prompt,
                 "image": image,
                 "model_name": model_name,
+                "lora_name": lora_name,
                 "width": width,
                 "height": height,
                 "steps": steps,
                 "batch_size": batch_size,
                 "guidance_scale": guidance_scale,
                 "mask_image": mask_image,
-                "strength": strength}
+                "strength": strength,
+                "seed": seed}
         try:
             async with httpx.AsyncClient(timeout=3600) as client:
                 response = await client.post(url, json=data)
@@ -49,9 +52,8 @@ class AvernusClient:
             return {"ERROR": str(e)}
 
     async def flux_image(self, prompt, image=None, model_name=None, lora_name=None, width=None, height=None, steps=None,
-                         batch_size=None, strength=None, controlnet_image=None,
-                         controlnet_processor=None, ip_adapter_image=None,
-                         ip_adapter_strength=None):
+                         batch_size=None, strength=None, controlnet_image=None, controlnet_processor=None,
+                         ip_adapter_image=None, ip_adapter_strength=None, seed=None, guidance_scale=None):
         """This takes a prompt and optional other variables and returns a list of base64 encoded images"""
         url = f"http://{self.base_url}/flux_generate"
         data = {"prompt": prompt,
@@ -66,7 +68,9 @@ class AvernusClient:
                 "controlnet_image": controlnet_image,
                 "controlnet_processor": controlnet_processor,
                 "ip_adapter_strength": ip_adapter_strength,
-                "ip_adapter_image": ip_adapter_image}
+                "ip_adapter_image": ip_adapter_image,
+                "seed": seed,
+                "guidance_scale": guidance_scale}
         try:
             async with httpx.AsyncClient(timeout=3600) as client:
                 response = await client.post(url, json=data)
@@ -79,19 +83,22 @@ class AvernusClient:
             return {"ERROR": str(e)}
 
     async def flux_inpaint_image(self, prompt, image=None, model_name=None, width=None,
-                         height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None, strength=None):
+                                 height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None,
+                                 strength=None, lora_name=None, seed=None):
         """This takes a prompt, and optional other variables and returns a list of base64 encoded images"""
         url = f"http://{self.base_url}/flux_inpaint_generate"
         data = {"prompt": prompt,
                 "image": image,
                 "model_name": model_name,
+                "lora_name": lora_name,
                 "width": width,
                 "height": height,
                 "steps": steps,
                 "batch_size": batch_size,
                 "guidance_scale": guidance_scale,
                 "mask_image": mask_image,
-                "strength": strength}
+                "strength": strength,
+                "seed": seed}
         try:
             async with httpx.AsyncClient(timeout=3600) as client:
                 response = await client.post(url, json=data)
@@ -165,6 +172,22 @@ class AvernusClient:
                 return {"ERROR": response.text}
         except Exception as e:
             print(f"list_sdxl_loras ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def list_sdxl_schedulers(self):
+        """Fetches the list of sdxl schedulers from the server."""
+        url = f"http://{self.base_url}/list_sdxl_schedulers"
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url)
+            if response.status_code == 200:
+                return response.json().get("schedulers", [])
+            else:
+                print(f"LIST SDXL SCHEDULERS ERROR: {response.status_code}, Response: {response.text}")
+                return {"ERROR": response.text}
+        except Exception as e:
+            print(f"list_sdxl_schedulers ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def llm_chat(self, prompt, model_name=None, messages=None):
@@ -247,7 +270,7 @@ class AvernusClient:
     async def sdxl_image(self, prompt, image=None, negative_prompt=None, model_name=None, lora_name=None, width=None,
                          height=None, steps=None, batch_size=None, guidance_scale=None, strength=None,
                          controlnet_image=None, controlnet_processor=None, controlnet_conditioning=None,
-                         ip_adapter_image=None, ip_adapter_strength=None):
+                         ip_adapter_image=None, ip_adapter_strength=None, scheduler=None, seed=None):
         """This takes a prompt, and optional other variables and returns a list of base64 encoded images"""
         url = f"http://{self.base_url}/sdxl_generate"
         data = {"prompt": prompt,
@@ -265,7 +288,9 @@ class AvernusClient:
                 "controlnet_processor": controlnet_processor,
                 "controlnet_conditioning": controlnet_conditioning,
                 "ip_adapter_strength": ip_adapter_strength,
-                "ip_adapter_image": ip_adapter_image}
+                "ip_adapter_image": ip_adapter_image,
+                "scheduler": scheduler,
+                "seed": seed}
         try:
             async with httpx.AsyncClient(timeout=3600) as client:
                 response = await client.post(url, json=data)
@@ -278,20 +303,24 @@ class AvernusClient:
             return {"ERROR": str(e)}
 
     async def sdxl_inpaint_image(self, prompt, image=None, negative_prompt=None, model_name=None, width=None,
-                         height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None, strength=None):
+                                 height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None,
+                                 strength=None, lora_name=None, scheduler=None, seed=None):
         """This takes a prompt, and optional other variables and returns a list of base64 encoded images"""
         url = f"http://{self.base_url}/sdxl_inpaint_generate"
         data = {"prompt": prompt,
                 "image": image,
                 "negative_prompt": negative_prompt,
                 "model_name": model_name,
+                "lora_name": lora_name,
                 "width": width,
                 "height": height,
                 "steps": steps,
                 "batch_size": batch_size,
                 "guidance_scale": guidance_scale,
                 "mask_image": mask_image,
-                "strength": strength}
+                "strength": strength,
+                "scheduler": scheduler,
+                "seed": seed}
         try:
             async with httpx.AsyncClient(timeout=3600) as client:
                 response = await client.post(url, json=data)
