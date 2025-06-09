@@ -1,4 +1,6 @@
 import asyncio
+import json
+import random
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
@@ -24,6 +26,7 @@ class FluxTab(QWidget):
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
+        self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
@@ -51,6 +54,7 @@ class FluxTab(QWidget):
 
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
         self.config_widgets_layout.addLayout(self.width_label)
         self.config_widgets_layout.addLayout(self.height_label)
         self.config_widgets_layout.addLayout(self.steps_label)
@@ -111,6 +115,7 @@ class FluxTab(QWidget):
         else:
             controlnet_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        add_artist = self.add_random_artist_checkbox.isChecked()
 
         try:
             request = FluxRequest(avernus_client=self.avernus_client,
@@ -133,7 +138,8 @@ class FluxTab(QWidget):
                                   controlnet_image=controlnet_image,
                                   enhance_prompt=enhance_prompt,
                                   guidance_scale=guidance_scale,
-                                  seed=seed)
+                                  seed=seed,
+                                  add_artist=add_artist)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1A103D")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -157,7 +163,8 @@ class FluxTab(QWidget):
 class FluxRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
                  strength, ip_adapter_strength, controlnet_processor, i2i_image_enabled, guidance_scale, seed,
-                 i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt):
+                 i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt,
+                 add_artist):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -179,6 +186,7 @@ class FluxRequest:
         self.controlnet_enabled = controlnet_enabled
         self.controlnet_image = controlnet_image
         self.enhance_prompt = enhance_prompt
+        self.add_artist = add_artist
         if self.width == "":
             self.width = 1024
         if self.height == "":
@@ -229,6 +237,9 @@ class FluxRequest:
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            if self.add_artist is True:
+                random_artist_prompt = await self.get_random_artist_prompt()
+                self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
             try:
                 base64_images = await self.avernus_client.flux_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
@@ -236,6 +247,9 @@ class FluxRequest:
             except Exception as e:
                 print(f"FLUX EXCEPTION: {e}")
         else:
+            if self.add_artist is True:
+                random_artist_prompt = await self.get_random_artist_prompt()
+                self.prompt = f"{random_artist_prompt}. {self.prompt}"
             try:
                 base64_images = await self.avernus_client.flux_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
@@ -253,3 +267,10 @@ class FluxRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+    @asyncSlot()
+    async def get_random_artist_prompt(self):
+        with open('assets/artist.json', 'r') as file:
+            data = json.load(file)
+            selected_artist = random.choice(data)
+            return selected_artist.get('prompt')

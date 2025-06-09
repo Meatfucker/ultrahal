@@ -4,7 +4,7 @@ import sys
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
                                QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout, QLayout, QComboBox,
-                               QInputDialog)
+                               QInputDialog, QButtonGroup)
 from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont
 from PySide6.QtCore import Qt, QSize
 
@@ -317,41 +317,77 @@ class OutpaintingWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        layout = QGridLayout()
-        layout.setSpacing(1)
-        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+        self.main_layout = QHBoxLayout()
+        self.button_layout = QGridLayout()
+        self.button_layout.setSpacing(1)
+        self.button_layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+        self.config_layout = QVBoxLayout()
 
-        align_northwest_button = SquareButton("↖")
-        align_north_button = SquareButton("🡩")
-        align_northeast_button = SquareButton("↗")
-        align_west_button = SquareButton("←")
-        align_center_button = SquareButton("O")
-        align_east_button = SquareButton("→")
-        align_southwest_button = SquareButton("↙")
-        align_south_button = SquareButton("↓")
-        align_southeast_button = SquareButton("↘")
+        self.align_northwest_button = SquareButton("↖")
+        self.align_north_button = SquareButton("🡩")
+        self.align_northeast_button = SquareButton("↗")
+        self.align_west_button = SquareButton("←")
+        self.align_center_button = SquareButton("O")
+        self.align_east_button = SquareButton("→")
+        self.align_southwest_button = SquareButton("↙")
+        self.align_south_button = SquareButton("↓")
+        self.align_southeast_button = SquareButton("↘")
+        self.align_northwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_north_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_northeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_west_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_center_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_east_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_southwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_south_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_southeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.align_northwest_button.setCheckable(True)
+        self.align_north_button.setCheckable(True)
+        self.align_northeast_button.setCheckable(True)
+        self.align_west_button.setCheckable(True)
+        self.align_center_button.setCheckable(True)
+        self.align_east_button.setCheckable(True)
+        self.align_southwest_button.setCheckable(True)
+        self.align_south_button.setCheckable(True)
+        self.align_southeast_button.setCheckable(True)
 
-        align_northwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_north_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_northeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_west_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_center_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_east_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_southwest_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_south_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        align_southeast_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.expand_pixels_input = SingleLineInputBox("# of pixels to expand:")
+        self.enable_outpainting_checkbox = QCheckBox("Enable outpainting")
 
-        layout.addWidget(align_northwest_button, 0 ,0)
-        layout.addWidget(align_north_button, 0, 1)
-        layout.addWidget(align_northeast_button, 0, 2)
-        layout.addWidget(align_west_button, 1, 0)
-        layout.addWidget(align_center_button, 1, 1)
-        layout.addWidget(align_east_button, 1, 2)
-        layout.addWidget(align_southwest_button, 2, 0)
-        layout.addWidget(align_south_button, 2, 1)
-        layout.addWidget(align_southeast_button, 2, 2)
+        self.button_layout.addWidget(self.align_northwest_button, 0 ,0)
+        self.button_layout.addWidget(self.align_north_button, 0, 1)
+        self.button_layout.addWidget(self.align_northeast_button, 0, 2)
+        self.button_layout.addWidget(self.align_west_button, 1, 0)
+        self.button_layout.addWidget(self.align_center_button, 1, 1)
+        self.button_layout.addWidget(self.align_east_button, 1, 2)
+        self.button_layout.addWidget(self.align_southwest_button, 2, 0)
+        self.button_layout.addWidget(self.align_south_button, 2, 1)
+        self.button_layout.addWidget(self.align_southeast_button, 2, 2)
 
-        self.setLayout(layout)
+        self.config_layout.addWidget(self.enable_outpainting_checkbox)
+        self.config_layout.addLayout(self.expand_pixels_input)
+
+        self.main_layout.addLayout(self.config_layout)
+        self.main_layout.addLayout(self.button_layout)
+        self.setLayout(self.main_layout)
+
+        self.alignment_button_group = QButtonGroup(self)
+        self.alignment_button_group.setExclusive(True)
+        self.alignment_button_group.addButton(self.align_northwest_button)
+        self.alignment_button_group.addButton(self.align_north_button)
+        self.alignment_button_group.addButton(self.align_northeast_button)
+        self.alignment_button_group.addButton(self.align_west_button)
+        self.alignment_button_group.addButton(self.align_center_button)
+        self.alignment_button_group.addButton(self.align_east_button)
+        self.alignment_button_group.addButton(self.align_southwest_button)
+        self.alignment_button_group.addButton(self.align_south_button)
+        self.alignment_button_group.addButton(self.align_southeast_button)
+
+    def get_selected_alignment(self):
+        button = self.alignment_button_group.checkedButton()
+        if button:
+            return button.text()  # or use custom data if you set any
+        return None
 
 
 class PainterWidget(QWidget):
@@ -525,9 +561,11 @@ class QueueObjectWidget(QFrame):
     def info(self):
         prompt = getattr(self.queue_object, "enhanced_prompt", None)
         if prompt and str(prompt).strip():
-            QMessageBox.information(self, "Info", str(prompt))
+            info_box = SelectableMessageBox("Generation Info", prompt)
         else:
-            QMessageBox.information(self, "Info", "No enhanced prompt found")
+            prompt = getattr(self.queue_object, "prompt", None)
+            info_box = SelectableMessageBox("Generation Info", prompt)
+        info_box.exec()
 
     def remove_from_queue(self):
 
@@ -586,6 +624,22 @@ class ScalingImageView(QGraphicsView):
         """Resize event to ensure the images fit within the view and re-tile them."""
         super().resizeEvent(event)
         self.resize_image()  # Fit the image to the window size
+
+class SelectableMessageBox(QDialog):
+    def __init__(self, title, message, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+
+        layout = QVBoxLayout(self)
+
+        self.text_edit = QTextEdit()
+        self.text_edit.setPlainText(message)
+        self.text_edit.setReadOnly(True)  # Prevent editing but allow selection
+        layout.addWidget(self.text_edit)
+
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button)
 
 
 class SingleLineInputBox(QHBoxLayout):

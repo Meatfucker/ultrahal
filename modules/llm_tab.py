@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton
 from qasync import asyncSlot
-from modules.ui_widgets import SingleLineInputBox
+from modules.ui_widgets import SingleLineInputBox, ModelPickerWidget
 
 
 class LlmTab(QWidget):
@@ -15,7 +15,7 @@ class LlmTab(QWidget):
         self.text_display = QTextEdit(readOnly=True)
         self.text_display.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self.text_input = QTextEdit(acceptRichText=False)
-        self.model_repo_label = SingleLineInputBox("Model Repo:", placeholder_text="Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4")
+        self.model_picker = ModelPickerWidget("llm")
         self.clear_history_button = QPushButton("Clear History")
         self.clear_history_button.clicked.connect(self.clear_history)
         self.submit_button = QPushButton("Submit")
@@ -29,9 +29,9 @@ class LlmTab(QWidget):
         main_layout.addLayout(config_layout, stretch=1)
         chat_layout.addWidget(self.text_display, stretch=5)
         chat_layout.addWidget(self.text_input, stretch=1)
-        chat_layout.addWidget(self.submit_button)
-        config_layout.addLayout(self.model_repo_label)
+        config_layout.addLayout(self.model_picker)
         config_layout.addWidget(self.clear_history_button, stretch=1)
+        config_layout.addWidget(self.submit_button)
 
         self.setLayout(main_layout)
 
@@ -42,7 +42,7 @@ class LlmTab(QWidget):
     @asyncSlot()
     async def on_submit(self):
         input_text = self.text_input.toPlainText()
-        model_name = self.model_repo_label.input.text()
+        model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRequest(self.avernus_client, self, input_text, model_name)
 
         queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#3F1507")

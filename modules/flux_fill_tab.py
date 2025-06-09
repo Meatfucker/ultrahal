@@ -48,11 +48,11 @@ class FluxFillTab(QWidget):
         self.paint_layout.addWidget(self.paint_area)
 
         # self.prompt_layout.addWidget(self.lora_list) Loras seem to have no effect though they load. Disabled for now
-        self.config_layout.addWidget(self.outpainting_controls)
-        self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addLayout(self.brush_size_slider)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
+        self.config_layout.addWidget(self.clear_mask_button)
+        self.config_layout.addWidget(self.outpainting_controls)
         self.config_layout.addLayout(self.prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
 
@@ -136,6 +136,7 @@ class FluxFillRequest:
         self.width = width
         self.height = height
         self.strength = strength
+        self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")

@@ -50,11 +50,11 @@ class SdxlInpaintTab(QWidget):
 
         self.paint_layout.addWidget(self.paint_area)
 
+        self.config_layout.addLayout(self.brush_size_slider)
         self.config_layout.addLayout(self.model_picker)
         self.config_layout.addWidget(self.scheduler_list)
-        self.config_layout.addWidget(self.lora_list)
         self.config_layout.addWidget(self.clear_mask_button)
-        self.config_layout.addLayout(self.brush_size_slider)
+        self.config_layout.addWidget(self.lora_list)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
         self.config_layout.addLayout(self.prompt_label)
@@ -159,6 +159,7 @@ class SDXLInpaintRequest:
         self.height = height
         self.strength = strength
         self.seed = seed
+        self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")

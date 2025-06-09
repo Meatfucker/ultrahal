@@ -1,4 +1,6 @@
 import asyncio
+import json
+import random
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QListWidget, QListWidgetItem,
@@ -27,12 +29,14 @@ class SdxlTab(QWidget):
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
+        self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
         self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="5.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
+
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
@@ -58,6 +62,7 @@ class SdxlTab(QWidget):
         self.config_widgets_layout.addWidget(self.scheduler_list)
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
         self.config_widgets_layout.addLayout(self.width_label)
         self.config_widgets_layout.addLayout(self.height_label)
         self.config_widgets_layout.addLayout(self.steps_label)
@@ -124,6 +129,7 @@ class SdxlTab(QWidget):
         else:
             controlnet_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        add_artist = self.add_random_artist_checkbox.isChecked()
 
         try:
             request = SDXLRequest(avernus_client=self.avernus_client,
@@ -148,6 +154,7 @@ class SdxlTab(QWidget):
                                   controlnet_enabled=controlnet_enable,
                                   controlnet_image=controlnet_image,
                                   enhance_prompt=enhance_prompt,
+                                  add_artist=add_artist,
                                   model_name=model_name,
                                   scheduler=scheduler,
                                   seed=seed)
@@ -182,7 +189,7 @@ class SDXLRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
                  lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength, controlnet_processor,
                  i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled,
-                 controlnet_image, enhance_prompt, model_name, scheduler, seed):
+                 controlnet_image, enhance_prompt, model_name, scheduler, seed, add_artist):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -208,11 +215,12 @@ class SDXLRequest:
         self.controlnet_enabled = controlnet_enabled
         self.controlnet_image = controlnet_image
         self.enhance_prompt = enhance_prompt
+        self.add_artist = add_artist
         if self.width == "":
             self.width = 1024
         if self.height == "":
             self.height = 1024
-        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.controlnet_enabled}"
+        self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.controlnet_enabled}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -262,6 +270,9 @@ class SDXLRequest:
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            if self.add_artist is True:
+                random_artist_prompt = await self.get_random_artist_prompt()
+                self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
             try:
                 base64_images = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
@@ -269,6 +280,9 @@ class SDXLRequest:
             except Exception as e:
                 print(f"SDXL EXCEPTION: {e}")
         else:
+            if self.add_artist is True:
+                random_artist_prompt = await self.get_random_artist_prompt()
+                self.prompt = f"{random_artist_prompt}. {self.prompt}"
             try:
                 base64_images = await self.avernus_client.sdxl_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
@@ -286,3 +300,10 @@ class SDXLRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+    @asyncSlot()
+    async def get_random_artist_prompt(self):
+        with open('assets/artist.json', 'r') as file:
+            data = json.load(file)
+            selected_artist = random.choice(data)
+            return selected_artist.get('prompt')
