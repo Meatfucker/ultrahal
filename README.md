@@ -17,9 +17,6 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 # TODO:
 
-- Add model selection to llm tab
 - Add video pipelines
-- Add Audio Pipelines
 - Add options for sorting the gallery
-- add random artist thing
-- add clear queue option/options
+- Figure out why flux fills outpainting still seems to not work

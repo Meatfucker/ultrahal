@@ -5,7 +5,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider
+from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ClickablePixmap
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxInpaintTab(QWidget):
@@ -187,7 +187,8 @@ class FluxInpaintRequest:
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap, self.tabs)
+            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
+            self.gallery.gallery.add_item(pixmap_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe

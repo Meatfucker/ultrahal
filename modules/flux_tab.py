@@ -7,7 +7,8 @@ from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout,
                                 QListWidget)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox, ResolutionInput,
+                                ClickablePixmap)
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxTab(QWidget):
@@ -27,8 +28,7 @@ class FluxTab(QWidget):
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
-        self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
-        self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
+        self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="3.5")
@@ -37,8 +37,8 @@ class FluxTab(QWidget):
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
         self.ipadapter_strength_label = HorizontalSlider("Strength", 0, 100, 60, enable_ticks=False)
-        self.controlnet_image_label = ImageInputBox(self, "Controlnet", "assets/chili.png")
-        self.controlnet_list = QComboBox()
+        self.kontext_image_label = ImageInputBox(self, "Kontext", "assets/chili.png")
+
 
         self.main_layout = QHBoxLayout()
         self.input_layout = QVBoxLayout()
@@ -48,15 +48,14 @@ class FluxTab(QWidget):
         self.image_input_layout = QHBoxLayout()
         self.i2i_layout = QVBoxLayout()
         self.ip_adapter_layout = QVBoxLayout()
-        self.controlnet_layout = QVBoxLayout()
+        self.kontext_layout = QVBoxLayout()
 
         self.prompt_layout.addLayout(self.prompt_label)
 
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
-        self.config_widgets_layout.addLayout(self.width_label)
-        self.config_widgets_layout.addLayout(self.height_label)
+        self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
@@ -65,14 +64,13 @@ class FluxTab(QWidget):
 
         self.image_input_layout.addLayout(self.i2i_layout)
         self.image_input_layout.addLayout(self.ip_adapter_layout)
-        self.image_input_layout.addLayout(self.controlnet_layout)
+        self.image_input_layout.addLayout(self.kontext_layout)
 
         self.i2i_layout.addLayout(self.i2i_image_label)
         self.i2i_layout.addLayout(self.i2i_strength_label)
         self.ip_adapter_layout.addLayout(self.ipadapter_image_label)
         self.ip_adapter_layout.addLayout(self.ipadapter_strength_label)
-        self.controlnet_layout.addLayout(self.controlnet_image_label)
-        self.controlnet_layout.addWidget(self.controlnet_list)
+        self.kontext_layout.addLayout(self.kontext_image_label)
 
         self.input_layout.addLayout(self.prompt_layout, stretch=1)
         self.input_layout.addLayout(self.image_input_layout, stretch=1)
@@ -81,11 +79,13 @@ class FluxTab(QWidget):
         self.main_layout.addLayout(self.config_widgets_layout, stretch=2)
         self.setLayout(self.main_layout)
 
+        self.setup_mutually_exclusive_checkboxes()
+
     @asyncSlot()
     async def on_submit(self):
         prompt = self.prompt_label.input.toPlainText()
-        width = self.width_label.input.text()
-        height = self.height_label.input.text()
+        width = self.resolution_widget.width_label.input.text()
+        height = self.resolution_widget.height_label.input.text()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
@@ -98,7 +98,6 @@ class FluxTab(QWidget):
                 lora_name.append(lora_list_item.text())
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         ip_adapter_strength = round(float(self.ipadapter_strength_label.slider.value() * 0.01), 2)
-        controlnet_processor = self.controlnet_list.currentText()
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
             i2i_image = self.i2i_image_label.input_image
@@ -109,11 +108,11 @@ class FluxTab(QWidget):
             ip_adapter_image = self.ipadapter_image_label.input_image
         else:
             ip_adapter_image = None
-        controlnet_enable = self.controlnet_image_label.enable_checkbox.isChecked()
-        if controlnet_enable is True:
-            controlnet_image = self.controlnet_image_label.input_image
+        kontext_enable = self.kontext_image_label.enable_checkbox.isChecked()
+        if kontext_enable is True:
+            kontext_image = self.kontext_image_label.input_image
         else:
-            controlnet_image = None
+            kontext_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         add_artist = self.add_random_artist_checkbox.isChecked()
 
@@ -129,13 +128,12 @@ class FluxTab(QWidget):
                                   lora_name=lora_name,
                                   strength=strength,
                                   ip_adapter_strength=ip_adapter_strength,
-                                  controlnet_processor=controlnet_processor,
                                   i2i_image_enabled=i2i_image_enable,
                                   i2i_image=i2i_image,
                                   ip_adapter_enabled=ip_adapter_enable,
                                   ip_adapter_image=ip_adapter_image,
-                                  controlnet_enabled=controlnet_enable,
-                                  controlnet_image=controlnet_image,
+                                  kontext_enabled=kontext_enable,
+                                  kontext_image=kontext_image,
                                   enhance_prompt=enhance_prompt,
                                   guidance_scale=guidance_scale,
                                   seed=seed,
@@ -145,7 +143,7 @@ class FluxTab(QWidget):
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
         except Exception as e:
-            print(f"SDXL on_submit EXCEPTION: {e}")
+            print(f"FLUX on_submit EXCEPTION: {e}")
 
     @asyncSlot()
     async def make_lora_list(self):
@@ -153,18 +151,27 @@ class FluxTab(QWidget):
         loras = await self.avernus_client.list_flux_loras()
         self.lora_list.insertItems(0, loras)
 
-    @asyncSlot()
-    async def make_controlnet_list(self):
-        self.controlnet_list.clear()
-        controlnets = await self.avernus_client.list_flux_controlnets()
-        for controlnet in controlnets:
-            self.controlnet_list.addItem(controlnet)
+    def setup_mutually_exclusive_checkboxes(self):
+        self.i2i_image_label.enable_checkbox.toggled.connect(self.on_i2i_checkbox_toggled)
+        self.kontext_image_label.enable_checkbox.toggled.connect(self.on_kontext_checkbox_toggled)
+
+    def on_i2i_checkbox_toggled(self, checked):
+        if checked:
+            self.kontext_image_label.enable_checkbox.blockSignals(True)
+            self.kontext_image_label.enable_checkbox.setChecked(False)
+            self.kontext_image_label.enable_checkbox.blockSignals(False)
+
+    def on_kontext_checkbox_toggled(self, checked):
+        if checked:
+            self.i2i_image_label.enable_checkbox.blockSignals(True)
+            self.i2i_image_label.enable_checkbox.setChecked(False)
+            self.i2i_image_label.enable_checkbox.blockSignals(False)
+
 
 class FluxRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
-                 strength, ip_adapter_strength, controlnet_processor, i2i_image_enabled, guidance_scale, seed,
-                 i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled, controlnet_image, enhance_prompt,
-                 add_artist):
+                 strength, ip_adapter_strength, i2i_image_enabled, guidance_scale, seed, i2i_image, ip_adapter_enabled,
+                 ip_adapter_image, kontext_enabled, kontext_image, enhance_prompt, add_artist):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -178,20 +185,19 @@ class FluxRequest:
         self.lora_name = lora_name
         self.strength = strength
         self.ip_adapter_strength = ip_adapter_strength
-        self.controlnet_processor = controlnet_processor
         self.i2i_image_enabled = i2i_image_enabled
         self.i2i_image = i2i_image
         self.ip_adapter_enabled = ip_adapter_enabled
         self.ip_adapter_image = ip_adapter_image
-        self.controlnet_enabled = controlnet_enabled
-        self.controlnet_image = controlnet_image
+        self.kontext_enabled = kontext_enabled
+        self.kontext_image = kontext_image
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
         if self.width == "":
             self.width = 1024
         if self.height == "":
             self.height = 1024
-        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.controlnet_enabled}"
+        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.kontext_enabled}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -228,11 +234,10 @@ class FluxRequest:
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if self.ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
-        if self.controlnet_enabled is True:
-            self.controlnet_image.save("temp.png", quality=100)
-            controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["controlnet_image"] = str(controlnet_image)
-            kwargs["controlnet_processor"] = str(self.controlnet_processor)
+        if self.kontext_enabled is True:
+            self.kontext_image.save("temp.png", quality=100)
+            kontext_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            kwargs["image"] = str(kontext_image)
 
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
@@ -241,7 +246,10 @@ class FluxRequest:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
             try:
-                base64_images = await self.avernus_client.flux_image(self.enhanced_prompt, **kwargs)
+                if self.kontext_enabled is True:
+                    base64_images = await self.avernus_client.flux_kontext(self.enhanced_prompt, **kwargs)
+                else:
+                    base64_images = await self.avernus_client.flux_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
@@ -251,7 +259,10 @@ class FluxRequest:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.prompt = f"{random_artist_prompt}. {self.prompt}"
             try:
-                base64_images = await self.avernus_client.flux_image(self.prompt, **kwargs)
+                if self.kontext_enabled is True:
+                    base64_images = await self.avernus_client.flux_kontext(self.prompt, **kwargs)
+                else:
+                    base64_images = await self.avernus_client.flux_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
@@ -262,7 +273,8 @@ class FluxRequest:
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap, self.tabs)
+            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
+            self.gallery.gallery.add_item(pixmap_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe

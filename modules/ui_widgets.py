@@ -1,18 +1,189 @@
 import json
 import os
 import sys
+import shutil
+import tempfile
+
+from pydub import AudioSegment
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
                                QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout, QLayout, QComboBox,
-                               QInputDialog, QButtonGroup)
+                               QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem, QPlainTextEdit)
 from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QUrl, QFileInfo, QMimeData, QTimer
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+
+
+
+class ClickableAudio(QGraphicsProxyWidget):
+    def __init__(self, audio_path: str, prompt, lyrics, gallery):
+        super().__init__()
+        self.audio_path = audio_path
+        self.prompt = prompt
+        self.lyrics = lyrics
+        self.gallery = gallery
+
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        self.prompt_label = QLabel("Prompt:")
+        self.prompt_display = QPlainTextEdit(readOnly=True)
+        self.prompt_display.setPlainText(prompt)
+        self.prompt_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.prompt_display.setMaximumHeight(50)
+        self.lyrics_label = QLabel("Lyrics:")
+        self.lyrics_display = QPlainTextEdit(readOnly=True)
+        self.lyrics_display.setPlainText(lyrics)
+        self.lyrics_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.lyrics_display.setMaximumHeight(100)
+        self.lyrics_display.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.progress_slider = QSlider(Qt.Horizontal)
+        self.progress_slider.setRange(0, 1000)
+        self.progress_slider.setEnabled(False)
+        self.time_label = QLabel("0:00 / 0:00")
+        self.play_button = QPushButton("▶")
+        self.play_button.setFocusPolicy(Qt.NoFocus)
+
+        layout.addWidget(self.prompt_label)
+        layout.addWidget(self.prompt_display)
+        layout.addWidget(self.lyrics_label)
+        layout.addWidget(self.lyrics_display)
+        progress_layout = QHBoxLayout()
+        progress_layout.addWidget(self.progress_slider)
+        progress_layout.addWidget(self.time_label)
+        layout.addLayout(progress_layout)
+        layout.addWidget(self.play_button)
+        widget.setLayout(layout)
+
+        # Media player setup
+        self.player = QMediaPlayer()
+        self.audio_output = QAudioOutput()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile(audio_path))
+
+        self.player.positionChanged.connect(self.update_slider_position)
+        self.player.durationChanged.connect(self.update_slider_range)
+        self.progress_slider.sliderMoved.connect(self.seek_position)
+        self.play_button.clicked.connect(self.toggle_play)
+
+        self.setWidget(widget)
+        self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
+
+    def toggle_play(self):
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.player.pause()
+            self.play_button.setText("▶")
+        else:
+            self.player.play()
+            self.play_button.setText("⏸︎")
+
+    def update_slider_range(self, duration):
+        self.progress_slider.setEnabled(True)
+        self.progress_slider.setMaximum(duration)
+        self.update_time_label(self.player.position(), duration)
+
+    def update_slider_position(self, position):
+        if not self.progress_slider.isSliderDown():
+            self.progress_slider.setValue(position)
+        self.update_time_label(position, self.player.duration())
+
+    def seek_position(self, position):
+        self.player.setPosition(position)
+
+    def update_time_label(self, position, duration):
+        def ms_to_min_sec(ms):
+            minutes = int(ms / 60000)
+            seconds = int((ms % 60000) / 1000)
+            return f"{minutes}:{seconds:02}"
+
+        current = ms_to_min_sec(position)
+        total = ms_to_min_sec(duration) if duration > 0 else "0:00"
+        self.time_label.setText(f"{current} / {total}")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            self.show_context_menu(event.screenPos())
+        else:
+            super().mousePressEvent(event)
+
+    def show_context_menu(self, global_pos):
+        menu = QMenu()
+        save_action = menu.addAction("Save WAV As...")
+        copy_action = menu.addAction("Copy WAV")
+        save_mp3_action = menu.addAction("Save MP3 As...")
+        copy_mp3_action = menu.addAction("Copy MP3")
+
+        action = menu.exec(global_pos)
+        if action == save_action:
+            self.save_wav_dialog()
+        if action == copy_action:
+            self.copy_wav_to_clipboard()
+        if action == save_mp3_action:
+            self.save_mp3_dialog()
+        if action == copy_mp3_action:
+            self.copy_mp3_to_clipboard()
+
+    def save_wav_dialog(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save WAV",
+            "ace_step.wav",
+            "WAV (*.wav)"
+        )
+        if file_path:
+            try:
+                shutil.copyfile(self.audio_path, file_path)
+            except Exception as e:
+                print(f"Failed to save audio file: {e}")
+
+    def save_mp3_dialog(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save MP3",
+            "audio.mp3",
+            "MP3 Files (*.mp3)"
+        )
+        if file_path:
+            self.convert_wav_to_mp3(self.audio_path, file_path)
+
+    def copy_wav_to_clipboard(self):
+        clipboard = QApplication.clipboard()
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile(self.audio_path)])
+        clipboard.setMimeData(mime_data)
+
+    def copy_mp3_to_clipboard(self):
+        try:
+            # Create a temporary MP3 file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_mp3:
+                mp3_path = tmp_mp3.name
+
+            # Convert WAV to MP3
+            audio = AudioSegment.from_wav(self.audio_path)
+            audio.export(mp3_path, format="mp3")
+
+            # Copy the MP3 file path to clipboard as URL
+            mime_data = QMimeData()
+            mime_data.setUrls([QUrl.fromLocalFile(mp3_path)])
+            QApplication.clipboard().setMimeData(mime_data)
+
+            print(f"Copied MP3 to clipboard: {mp3_path}")
+        except Exception as e:
+            print(f"Failed to copy MP3 to clipboard: {e}")
+
+    def convert_wav_to_mp3(self, wav_path: str, mp3_path: str):
+        try:
+            audio = AudioSegment.from_wav(wav_path)
+            audio.export(mp3_path, format="mp3")
+            print(f"Converted to MP3: {mp3_path}")
+        except Exception as e:
+            print(f"Failed to convert WAV to MP3: {e}")
 
 
 class ClickablePixmap(QGraphicsPixmapItem):
-    def __init__(self, original_pixmap, gallery, parent, tabs):
+    def __init__(self, original_pixmap, gallery, tabs):
         super().__init__(original_pixmap)
-        self.parent = parent
         self.tabs = tabs
         self.queue_tab = self.tabs.widget(1)
         self.sdxl_tab = self.tabs.widget(3)
@@ -34,7 +205,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 height = self.gallery.viewport().height()
                 self.gallery.scaled_image_view.clear()
                 scaled_pixmap = self.original_pixmap.scaled(QSize(width, height), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                scaled_to_fit_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.tabs)
+                scaled_to_fit_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.tabs)
                 scaled_to_fit_pixmap.setPixmap(scaled_pixmap)
                 scaled_to_fit_pixmap.view_state = 2
                 self.gallery.scaled_image_view.addItem(scaled_to_fit_pixmap)
@@ -44,7 +215,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 width = self.gallery.viewport().width()
                 self.gallery.full_image_view.clear()
                 scaled_fullscreen_pixmap = self.original_pixmap.scaledToWidth(width, Qt.SmoothTransformation)
-                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.parent, self.tabs)
+                fullscreen_pixmap = ClickablePixmap(self.original_pixmap, self.gallery, self.tabs)
                 fullscreen_pixmap.setPixmap(scaled_fullscreen_pixmap)
                 fullscreen_pixmap.view_state = 3
                 self.gallery.full_image_view.addItem(fullscreen_pixmap)
@@ -71,7 +242,7 @@ class ClickablePixmap(QGraphicsPixmapItem):
         sdxl_send_to_inpaint = sdxl_inpaint_menu.addAction("Send to SDXL Inpaint")
         flux_send_to_i2i = flux_menu.addAction("Send to I2I")
         flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
-        flux_sent_to_controlnet = flux_menu.addAction("Send to Controlnet")
+        flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
         flux_send_to_inpaint = flux_inpaint_menu.addAction("Send to Flux Inpaint")
         flux_send_to_fill = flux_inpaint_menu.addAction("Send to Flux Fill")
 
@@ -102,9 +273,9 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if action == flux_send_to_ipadapter:
             self.flux_tab.ipadapter_image_label.input_image = self.original_pixmap
             self.flux_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
-        if action == flux_sent_to_controlnet:
-            self.flux_tab.controlnet_image_label.input_image = self.original_pixmap
-            self.flux_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == flux_sent_to_kontext:
+            self.flux_tab.kontext_image_label.input_image = self.original_pixmap
+            self.flux_tab.kontext_image_label.image_view.add_pixmap(self.original_pixmap)
 
         if action == flux_send_to_inpaint:
             self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
@@ -188,31 +359,44 @@ class ImageGalleryViewer(QGraphicsView):
         self.full_image_view = QGraphicsScene()
         self.setScene(self.gallery)
 
-    def add_pixmap(self, pixmap, tabs):
-        pixmap_item: ClickablePixmap = ClickablePixmap(pixmap, self, self.parent, tabs)
-        self.gallery.addItem(pixmap_item)
+    def add_item(self, item: QGraphicsItem):
+        self.gallery.addItem(item)
 
     def tile_images(self):
         cur_x = 0
         cur_y = 0
-        image_height = 0
         width = self.viewport().width()
-        tile_width = width / self.top_layout.column_slider.slider.value()
-        for image in self.gallery.items():
-            scaled_pixmap = image.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
-            if scaled_pixmap.size().height() > image_height:
-                image_height = scaled_pixmap.size().height()
-        for image in self.gallery.items():
-            scaled_pixmap = image.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
-            image.setPixmap(scaled_pixmap)
-            image.setPos(cur_x, cur_y)
-            if cur_x + tile_width >= width:
-                cur_y = cur_y + image_height
-                cur_x = 0
-            else:
-                cur_x = cur_x + tile_width
-        self.gallery.setSceneRect(0, 0, width, cur_y + image_height)
+        columns = self.top_layout.column_slider.slider.value()
+        tile_width = width / columns
+        spacing = 10
 
+        row_max_height = 0
+        current_row = []
+
+        for item in self.gallery.items():
+            if isinstance(item, ClickablePixmap):
+                scaled_pixmap = item.original_pixmap.scaledToWidth(tile_width, Qt.SmoothTransformation)
+                item.setPixmap(scaled_pixmap)
+            elif isinstance(item, ClickableAudio):
+                widget = item.widget()
+                widget.setFixedWidth(tile_width)
+                widget.adjustSize()  # allow height to adapt
+            else:
+                continue  # unsupported type
+
+            item.setPos(cur_x, cur_y)
+            current_row.append(item)
+            item_height = item.boundingRect().height()
+            row_max_height = max(row_max_height, item_height)
+            cur_x += tile_width + spacing
+
+            if len(current_row) >= columns:
+                cur_y += row_max_height + spacing
+                cur_x = 0
+                row_max_height = 0
+                current_row = []
+
+        self.gallery.setSceneRect(0, 0, width, cur_y + row_max_height + spacing)
 
     def resizeEvent(self, event):
         """Resize event to ensure the images fit within the view and re-tile them."""
@@ -579,20 +763,61 @@ class QueueViewer(QScrollArea):
         self.container_widget = QWidget()
         self.setWidget(self.container_widget)
         self.setWidgetResizable(True)
+        self.clear_queue_button = QPushButton("Clear Queue")
+        self.clear_queue_button.clicked.connect(self.clear_queue)
 
         self.main_layout = QVBoxLayout(self.container_widget)
-        self.main_layout.setAlignment(Qt.AlignTop)
-        self.main_layout.addStrut(250)
+        self.queue_layout = QVBoxLayout()
+        self.queue_layout.setAlignment(Qt.AlignTop)
+        self.queue_layout.addStrut(250)
+
+        self.main_layout.addLayout(self.queue_layout, stretch=10)
+        self.main_layout.addWidget(self.clear_queue_button)
 
     def add_queue_item(self, queue_item, queue_view, hex_color):
         queue_widget = QueueObjectWidget(queue_item, hex_color, queue_view)
-        self.main_layout.addWidget(queue_widget)
+        self.queue_layout.addWidget(queue_widget)
         return queue_widget
 
     def del_queue_item(self, queue_widget):
-        self.main_layout.removeWidget(queue_widget)
+        self.queue_layout.removeWidget(queue_widget)
         queue_widget.setParent(None)
         queue_widget.deleteLater()
+
+    def clear_queue(self):
+        while self.queue_layout.count():
+            item = self.queue_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+
+class ResolutionInput(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.swap_button = QPushButton("↕")
+        self.swap_button.setFixedWidth(20)
+        self.swap_button.clicked.connect(self.swap_resolution)
+        self.swap_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
+        self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
+
+        layout = QHBoxLayout(self)
+        self.input_layout = QVBoxLayout()
+
+        self.input_layout.addLayout(self.width_label)
+        self.input_layout.addLayout(self.height_label)
+
+        layout.addWidget(self.swap_button)
+        layout.addLayout(self.input_layout)
+
+
+    def swap_resolution(self):
+        current_height = self.height_label.input.text()
+        current_width = self.width_label.input.text()
+        self.height_label.input.setText(current_width)
+        self.width_label.input.setText(current_height)
 
 
 class ScalingImageView(QGraphicsView):

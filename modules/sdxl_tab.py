@@ -7,7 +7,8 @@ from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout,
                                 QPushButton, QVBoxLayout, QWidget)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, SingleLineInputBox
+from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
+                                SingleLineInputBox, ClickablePixmap)
 from modules.utils import base64_to_images, image_to_base64
 
 class SdxlTab(QWidget):
@@ -30,8 +31,7 @@ class SdxlTab(QWidget):
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
-        self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
-        self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
+        self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="5.0")
@@ -63,8 +63,7 @@ class SdxlTab(QWidget):
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
-        self.config_widgets_layout.addLayout(self.width_label)
-        self.config_widgets_layout.addLayout(self.height_label)
+        self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
@@ -94,8 +93,8 @@ class SdxlTab(QWidget):
     async def on_submit(self):
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
-        width = self.width_label.input.text()
-        height = self.height_label.input.text()
+        width = self.resolution_widget.width_label.input.text()
+        height = self.resolution_widget.height_label.input.text()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
@@ -244,8 +243,8 @@ class SDXLRequest:
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         kwargs["model_name"] = str(self.model_name)
         kwargs["scheduler"] = str(self.scheduler)
-        kwargs["width"] = int(self.width)
-        kwargs["height"] = int(self.height)
+        if self.width is not None: kwargs["width"] = int(self.width)
+        if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled is True:
             self.i2i_image.save("temp.png", quality=100)
@@ -278,7 +277,7 @@ class SDXLRequest:
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
-                print(f"SDXL EXCEPTION: {e}")
+                print(f"SDXL REQUEST EXCEPTION: {e}")
         else:
             if self.add_artist is True:
                 random_artist_prompt = await self.get_random_artist_prompt()
@@ -288,14 +287,15 @@ class SDXLRequest:
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
-                print(f"SDXL EXCEPTION: {e}")
+                print(f"SDXL REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap, self.tabs)
+            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
+            self.gallery.gallery.add_item(pixmap_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe

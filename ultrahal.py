@@ -5,6 +5,7 @@ import qasync
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
 from qasync import QEventLoop, asyncSlot
+from modules.ace_tab import ACETab
 from modules.avernus_client import AvernusClient
 from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
@@ -49,6 +50,7 @@ class MainWindow(QWidget):
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
+        self.ace_tab = ACETab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -63,6 +65,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
+        self.tabs.addTab(self.ace_tab, "ACE")
 
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)
@@ -86,7 +89,6 @@ class MainWindow(QWidget):
         await self.sdxl_inpaint_tab.make_lora_list()
         await self.sdxl_inpaint_tab.make_scheduler_list()
         await self.flux_tab.make_lora_list()
-        await self.flux_tab.make_controlnet_list()
         await self.flux_inpaint_tab.make_lora_list()
         await self.flux_fill_tab.make_lora_list()
 
@@ -104,6 +106,9 @@ class MainWindow(QWidget):
                     await queue_request.run()
                 except Exception as e:
                     print(f"Exception while processing request: {e}")
+
+    def closeEvent(self, event):
+        QApplication.quit()
 
 
 if __name__ == "__main__":

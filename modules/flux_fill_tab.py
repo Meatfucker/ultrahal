@@ -1,11 +1,13 @@
 import asyncio
 
+from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, OutpaintingWidget
+from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider,
+                                OutpaintingWidget, ClickablePixmap)
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxFillTab(QWidget):
@@ -81,6 +83,11 @@ class FluxFillTab(QWidget):
             for lora_list_item in lora_items:
                 lora_name.append(lora_list_item.text())
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        if self.outpainting_controls.enable_outpainting_checkbox.isChecked():
+            outpainting_pixels = self.outpainting_controls.expand_pixels_input.input.text()
+        else:
+            outpainting_pixels = 0
+        outpainting_direction = self.outpainting_controls.get_selected_alignment()
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
         strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
@@ -100,7 +107,9 @@ class FluxFillTab(QWidget):
                                       image=self.paint_area.original_image,
                                       mask_image=self.paint_area.original_mask,
                                       strength=strength,
-                                      seed=seed)
+                                      seed=seed,
+                                      outpainting_pixels=outpainting_pixels,
+                                      outpainting_direction=outpainting_direction)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#5F5482")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -119,7 +128,8 @@ class FluxFillTab(QWidget):
 
 class FluxFillRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, seed):
+                 enhance_prompt, width, height, image, mask_image, strength, lora_name, seed, outpainting_pixels,
+                 outpainting_direction):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -136,6 +146,8 @@ class FluxFillRequest:
         self.width = width
         self.height = height
         self.strength = strength
+        self.outpainting_pixels = outpainting_pixels
+        self.outpainting_direction = outpainting_direction
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
@@ -157,15 +169,35 @@ class FluxFillRequest:
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
-        self.image.save("temp.png", quality=100)
-        image = image_to_base64("temp.png", self.width, self.height)
+        self.image.save("image_temp.png", quality=100)
+        image = image_to_base64("image_temp.png", self.width, self.height)
         kwargs["image"] = str(image)
-        self.mask_image.save("temp.png", quality=100)
-        mask_image = image_to_base64("temp.png", self.width, self.height)
+        self.mask_image.save("mask_temp.png", quality=100)
+        mask_image = image_to_base64("mask_temp.png", self.width, self.height)
         kwargs["mask_image"] = str(mask_image)
         kwargs["width"] = self.width
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
+        if int(self.outpainting_pixels) > 0:
+            pil_image = Image.open("image_temp.png")
+            pil_mask_image = Image.open("mask_temp.png")
+            #outpainting_image, outpainting_mask, new_width, new_height = await self.get_outpainting_images(int(self.outpainting_pixels),
+            #                                                                                               self.outpainting_direction,
+            #                                                                                               pil_image,
+            #                                                                                               pil_mask_image,
+            #                                                                                               int(kwargs["width"]),
+            #                                                                                               int(kwargs["height"]))
+            #kwargs["width"] = new_width
+            #kwargs["height"] = new_height
+            #outpainting_image.save("composited_temp.png", quality=100)
+            #image = image_to_base64("composited_temp.png", new_width, new_height)
+            image = image_to_base64("test_image.png", 1024, 1024)
+            kwargs["image"] = str(image)
+            #outpainting_mask.save("composited_mask_temp.png", quality=100)
+            #mask_image = image_to_base64("composited_mask_temp.png", new_width, new_height)
+            mask_image = image_to_base64("test_mask.png", 1024, 1024)
+            kwargs["mask_image"] = str(mask_image)
+
 
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
@@ -189,8 +221,54 @@ class FluxFillRequest:
         for image in images:
             pixmap = QPixmap()
             pixmap.loadFromData(image.getvalue())
-            self.gallery.gallery.add_pixmap(pixmap, self.tabs)
+            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
+            self.gallery.gallery.add_item(pixmap_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+    @asyncSlot()
+    async def get_outpainting_images(self, outpainting_pixels, outpainting_direction, image, mask_image, width, height):
+        if outpainting_direction in ("↖", "↗", "↙", "↘"):
+            new_width = width + outpainting_pixels
+            new_height = height + outpainting_pixels
+            if outpainting_direction == "↖":
+                paste_position = (outpainting_pixels, outpainting_pixels)
+            elif outpainting_direction == "↗":
+                paste_position = (0, outpainting_pixels)
+            elif outpainting_direction == "↙":
+                paste_position = (outpainting_pixels, 0)
+            elif outpainting_direction == "↘":
+                paste_position = (0, 0)
+
+        if outpainting_direction in ("↓", "🡩"):
+            new_width = width
+            new_height = height + outpainting_pixels
+            if outpainting_direction == "↓":
+                paste_position = (0, 0)
+            elif outpainting_direction == "🡩":
+                paste_position = (0, outpainting_pixels)
+
+        if outpainting_direction in ("←", "→"):
+            new_width = width + outpainting_pixels
+            new_height = height
+            if outpainting_direction == "←":
+                paste_position = (outpainting_pixels, 0)
+            elif outpainting_direction == "→":
+                paste_position = (0, 0)
+
+        if outpainting_direction in ("O"):
+            new_width = width + (outpainting_pixels * 2)
+            new_height = height + (outpainting_pixels * 2)
+            paste_position = (outpainting_pixels, outpainting_pixels)
+
+        new_image = Image.new("RGBA", (new_width, new_height), (0, 0, 0))
+        new_image.paste(image, paste_position)
+
+        old_mask = Image.new("RGBA", (width, height), (0, 0, 0))
+        new_mask = Image.new("RGBA", (new_width, new_height), (255, 255, 255))
+        new_mask.paste(old_mask, paste_position)
+
+        #new_mask.paste(mask_image, paste_position)
+        return new_image, new_mask, new_width, new_height
