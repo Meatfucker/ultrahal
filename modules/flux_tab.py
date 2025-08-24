@@ -193,11 +193,11 @@ class FluxRequest:
         self.kontext_image = kontext_image
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
+        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.kontext_enabled}"
         if self.width == "":
             self.width = 1024
         if self.height == "":
             self.height = 1024
-        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.kontext_enabled}"
 
     async def run(self):
         self.ui_item.status_label.setText("Running")
@@ -218,8 +218,8 @@ class FluxRequest:
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
-        kwargs["width"] = int(self.width)
-        kwargs["height"] = int(self.height)
+        if self.width is not None: kwargs["width"] = int(self.width)
+        if self.height is not None: kwargs["height"] = int(self.height)
 
 
         if self.i2i_image_enabled is True:
@@ -236,8 +236,13 @@ class FluxRequest:
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
         if self.kontext_enabled is True:
             self.kontext_image.save("temp.png", quality=100)
-            kontext_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            kontext_width = int(self.kontext_image.width())
+            kontext_height = int(self.kontext_image.height())
+            kontext_image = image_to_base64("temp.png", kontext_width, kontext_height)
             kwargs["image"] = str(kontext_image)
+            kwargs["width"] = None
+            kwargs["height"] = None
+
 
         if self.enhance_prompt is True:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
