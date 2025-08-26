@@ -75,11 +75,8 @@ class MainWindow(QWidget):
     @asyncSlot()
     async def update_avernus_url(self):
         self.avernus_url = self.avernus_entry.text()
-        self.avernus_client = AvernusClient(self.avernus_url)
+        await self.avernus_client.update_url(self.avernus_url)
         self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
-        self.llm_chat_tab.avernus_client = self.avernus_client
-        self.sdxl_tab.avernus_client = self.avernus_client
-        self.flux_tab.avernus_client = self.avernus_client
         print(f"Avernus URL Updated: {self.avernus_url}")
         status = await self.avernus_client.check_status()
         print(status)
