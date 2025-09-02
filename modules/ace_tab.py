@@ -1,5 +1,6 @@
 import asyncio
 import tempfile
+import time
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QApplication
 from qasync import asyncSlot
@@ -80,10 +81,13 @@ class ACERequest:
         self.queue_info = None
 
     async def run(self):
+        start_time = time.time()
         self.ui_item.status_label.setText("Running")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
-        self.ui_item.status_label.setText("Finished")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
@@ -97,7 +101,6 @@ class ACERequest:
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.omega_scale != "": kwargs["omega_scale"] = float(self.omega_scale)
         if self.seed != "": kwargs["actual_seeds"] = int(self.seed)
-
 
         response = await self.avernus_client.ace_music(**kwargs)
         await self.display_audio(response)

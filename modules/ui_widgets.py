@@ -368,7 +368,7 @@ class ImageGalleryViewer(QGraphicsView):
         width = self.viewport().width()
         columns = self.top_layout.column_slider.slider.value()
         tile_width = width / columns
-        spacing = 10
+        spacing = 0
 
         row_max_height = 0
         current_row = []

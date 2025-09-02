@@ -1,5 +1,5 @@
 import asyncio
-
+import time
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget
@@ -137,10 +137,13 @@ class FluxInpaintRequest:
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
+        start_time = time.time()
         self.ui_item.status_label.setText("Running")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
-        self.ui_item.status_label.setText("Finished")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
 

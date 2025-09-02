@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import time
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
@@ -200,10 +201,13 @@ class FluxRequest:
             self.height = 1024
 
     async def run(self):
+        start_time = time.time()
         self.ui_item.status_label.setText("Running")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
-        self.ui_item.status_label.setText("Finished")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
 
