@@ -412,13 +412,17 @@ class ImageInputBox(QHBoxLayout):
         self.image_file_path = None
 
         self.enable_checkbox = QCheckBox(f"Enable {name} input")
+        self.paste_image_button = QPushButton("Paste")
+        self.paste_image_button.clicked.connect(self.paste_image)
         self.load_image_button = QPushButton("Load")
         self.load_image_button.clicked.connect(self.load_image)
         self.image_view = ScalingImageView()
-
+        self.input_image = QPixmap("assets/chili.png")
+        self.image_view.add_pixmap(self.input_image)
         self.image_layout = QVBoxLayout()
         self.enable_layout = QHBoxLayout()
         self.enable_layout.addWidget(self.enable_checkbox)
+        self.enable_layout.addWidget(self.paste_image_button)
         self.enable_layout.addWidget(self.load_image_button)
         self.image_layout.addLayout(self.enable_layout)
         self.image_layout.addWidget(self.image_view)
@@ -429,6 +433,15 @@ class ImageInputBox(QHBoxLayout):
         if self.image_file_path != "":
             self.input_image = QPixmap(self.image_file_path)
             self.image_view.add_pixmap(self.input_image)
+
+    def paste_image(self):
+        clipboard = QApplication.clipboard()
+        mimeData = clipboard.mimeData()
+        if mimeData.hasImage():
+            clipboard.setPixmap(QPixmap(mimeData.imageData()))
+            self.input_image = clipboard.pixmap()
+            self.image_view.add_pixmap(clipboard.pixmap())
+
 
 class ModelPickerWidget(QVBoxLayout):
     def __init__(self, model_arch):
@@ -825,9 +838,7 @@ class ScalingImageView(QGraphicsView):
         super().__init__()
         self.gallery = QGraphicsScene()
         self.setScene(self.gallery)
-        self.default_image = QPixmap("assets/chili.png")
-        self.original_image = self.default_image
-        self.add_pixmap(self.default_image)
+        self.original_image = None
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
