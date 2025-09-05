@@ -1,5 +1,5 @@
 import time
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QSizePolicy
 from qasync import asyncSlot
 from modules.ui_widgets import SingleLineInputBox, ModelPickerWidget
 
@@ -21,6 +21,14 @@ class LlmTab(QWidget):
         self.clear_history_button.clicked.connect(self.clear_history)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
+        self.submit_button.setMinimumSize(100, 40)
+        self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.submit_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 20px;
+                        padding: 15px;
+                    }
+                """)
 
         main_layout = QHBoxLayout()
         chat_layout = QVBoxLayout()

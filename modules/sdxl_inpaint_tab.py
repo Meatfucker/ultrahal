@@ -3,7 +3,7 @@ import time
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget,
-                                QComboBox)
+                                QComboBox, QSizePolicy)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider,
@@ -33,6 +33,13 @@ class SdxlInpaintTab(QWidget):
         self.strength_slider = HorizontalSlider("Replace %", 0, 100, 70, enable_ticks=False)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
+        self.submit_button.setMinimumSize(100, 40)
+        self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.submit_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 20px;
+                    }
+                """)
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()

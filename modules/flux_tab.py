@@ -5,7 +5,7 @@ import time
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
-                                QListWidget)
+                                QListWidget, QSizePolicy)
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox, ResolutionInput,
@@ -24,6 +24,14 @@ class FluxTab(QWidget):
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
+        self.submit_button.setMinimumSize(100, 40)
+        self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.submit_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 20px;
+                        padding: 15px;
+                    }
+                """)
         self.prompt_label = ParagraphInputBox("Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)

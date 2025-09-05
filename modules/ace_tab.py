@@ -2,7 +2,7 @@ import asyncio
 import tempfile
 import time
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QApplication
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QApplication, QSizePolicy
 from qasync import asyncSlot
 from modules.ui_widgets import SingleLineInputBox, ClickableAudio
 
@@ -27,6 +27,14 @@ class ACETab(QWidget):
         self.seed_input = SingleLineInputBox("Seed", placeholder_text="42")
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
+        self.submit_button.setMinimumSize(100, 40)
+        self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.submit_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 20px;
+                        padding: 15px;
+                    }
+                """)
 
         main_layout = QHBoxLayout()
         input_layout = QVBoxLayout()
