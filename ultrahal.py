@@ -15,6 +15,7 @@ from modules.gallery import GalleryTab
 from modules.sdxl_tab import SdxlTab
 from modules.sdxl_inpaint_tab import SdxlInpaintTab
 from modules.queue import QueueTab
+from modules.qwen_tab import QwenTab
 
 
 class MainWindow(QWidget):
@@ -51,6 +52,7 @@ class MainWindow(QWidget):
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
+        self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -66,6 +68,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
         self.tabs.addTab(self.ace_tab, "ACE")
+        self.tabs.addTab(self.qwen_tab, "Qwen")
 
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)
@@ -88,6 +91,7 @@ class MainWindow(QWidget):
         await self.flux_tab.make_lora_list()
         await self.flux_inpaint_tab.make_lora_list()
         await self.flux_fill_tab.make_lora_list()
+        await self.qwen_tab.make_lora_list()
 
     @asyncSlot()
     async def process_request_queue(self):

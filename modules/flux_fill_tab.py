@@ -25,7 +25,7 @@ class FluxFillTab(QWidget):
         self.outpainting_controls = OutpaintingWidget()
         self.clear_mask_button = QPushButton("Clear Mask")
         self.clear_mask_button.clicked.connect(self.paint_area.clear)
-        self.brush_size_slider = HorizontalSlider("Brush Size", 1, 200, 10, enable_ticks=False)
+        self.brush_size_slider = HorizontalSlider("Brush Size", 1, 127, 10, enable_ticks=False)
         self.brush_size_slider.slider.valueChanged.connect(self.set_brush_size)
         self.load_button = QPushButton("Load Image")
         self.load_button.clicked.connect(self.paint_area.load_image)
