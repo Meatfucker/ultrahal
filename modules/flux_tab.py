@@ -29,7 +29,6 @@ class FluxTab(QWidget):
         self.submit_button.setStyleSheet("""
                     QPushButton {
                         font-size: 20px;
-                        padding: 15px;
                     }
                 """)
         self.prompt_label = ParagraphInputBox("Prompt")

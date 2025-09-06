@@ -191,6 +191,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
         self.flux_tab = self.tabs.widget(5)
         self.flux_inpaint_tab = self.tabs.widget(6)
         self.flux_fill_tab = self.tabs.widget(7)
+        self.qwen_image_tab = self.tabs.widget(9)
+        self.qwen_image_inpaint_tab = self.tabs.widget(10)
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
@@ -236,6 +238,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
         sdxl_inpaint_menu = menu.addMenu("SDXL Inpaint")
         flux_menu = menu.addMenu("Flux")
         flux_inpaint_menu = menu.addMenu("Flux Inpaint")
+        qwen_menu = menu.addMenu("Qwen")
+        qwen_inpaint_menu = menu.addMenu("Qwen Inpaint")
         sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
         sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
         sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
@@ -245,6 +249,9 @@ class ClickablePixmap(QGraphicsPixmapItem):
         flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
         flux_send_to_inpaint = flux_inpaint_menu.addAction("Send to Flux Inpaint")
         flux_send_to_fill = flux_inpaint_menu.addAction("Send to Flux Fill")
+        qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
+        qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
+        qwen_image_send_to_inpaint = qwen_inpaint_menu.addAction("Send to Qwen Image Inpaint")
 
 
         action = menu.exec(global_pos)
@@ -281,6 +288,15 @@ class ClickablePixmap(QGraphicsPixmapItem):
             self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
         if action == flux_send_to_fill:
             self.flux_fill_tab.paint_area.set_image(self.original_pixmap)
+
+        if action == qwen_image_send_to_i2i:
+            self.qwen_image_tab.i2i_image_label.input_image = self.original_pixmap
+            self.qwen_image_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == qwen_image_send_to_edit:
+            self.qwen_image_tab.edit_image_label.input_image = self.original_pixmap
+            self.qwen_image_tab.edit_image_label.image_view.add_pixmap(self.original_pixmap)
+        if action == qwen_image_send_to_inpaint:
+            self.qwen_image_inpaint_tab.paint_area.set_image(self.original_pixmap)
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
