@@ -48,6 +48,7 @@ class ACETab(QWidget):
         config_layout.addLayout(self.guidance_scale_input)
         config_layout.addLayout(self.omega_scale_input)
         config_layout.addLayout(self.seed_input)
+        config_layout.addStretch()
         config_layout.addWidget(self.submit_button)
 
         main_layout.addLayout(input_layout)
@@ -92,8 +93,7 @@ class ACERequest:
         self.ui_item.status_label.setText("Running")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
+        elapsed_time = time.time() - start_time
         self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
