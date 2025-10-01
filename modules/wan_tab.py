@@ -18,10 +18,8 @@ class WanTab(QWidget):
         self.queue_view = self.queue_tab.queue_view
 
         self.i2v_image_label = ImageInputBox(self, "i2v", "assets/chili.png")
-        self.t2v_label = QLabel("T2V Model")
-        self.model_picker_t2v = ModelPickerWidget("wan_t2v")
-        self.i2v_label = QLabel("I2V Model")
-        self.model_picker_i2v = ModelPickerWidget("wan_i2v")
+        self.model_picker_t2v = ModelPickerWidget("wan_t2v", "T2V Model")
+        self.model_picker_i2v = ModelPickerWidget("wan_i2v", "I2V Model")
         self.prompt_input = SingleLineInputBox("Prompt")
         self.negative_prompt_input = SingleLineInputBox("Negative Prompt")
         self.frames_input = SingleLineInputBox("Frames", placeholder_text="81")
@@ -43,11 +41,8 @@ class WanTab(QWidget):
         image_layout.setAlignment(Qt.AlignTop)
         input_layout = QVBoxLayout()
         input_layout.setAlignment(Qt.AlignTop)
-
         image_layout.addLayout(self.i2v_image_label)
-        input_layout.addWidget(self.t2v_label)
         input_layout.addLayout(self.model_picker_t2v)
-        input_layout.addWidget(self.i2v_label)
         input_layout.addLayout(self.model_picker_i2v)
         input_layout.addLayout(self.prompt_input)
         input_layout.addLayout(self.negative_prompt_input)

@@ -1,3 +1,13 @@
 # Project exclude paths
 /venv/
 /.idea
+/composited_mask_temp.png
+/composited_temp.png
+/image_temp.png
+/mask_temp.png
+/output.wav
+/temp.png
+/temp1.png
+/test_image.png
+/test_mask.png
+/wan.mp4

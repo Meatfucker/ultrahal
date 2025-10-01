@@ -835,7 +835,7 @@ class LLMHistoryObjectWidget(QFrame):
 
 
 class ModelPickerWidget(QVBoxLayout):
-    def __init__(self, model_arch):
+    def __init__(self, model_arch, label=None):
         super().__init__()
         self.data_list = []
         self.model_arch = model_arch
@@ -856,8 +856,11 @@ class ModelPickerWidget(QVBoxLayout):
         self.model_list_picker.insertItems(0, self.data_list)
         self.model_list_picker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.model_list_picker.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.addWidget(self.model_list_picker)
-
+        self.dropdown_layout = QHBoxLayout()
+        if label is not None:
+            self.model_label = QLabel(label)
+            self.dropdown_layout.addWidget(self.model_label)
+        self.dropdown_layout.addWidget(self.model_list_picker)
         self.button_layout = QHBoxLayout()
         self.add_model_button = QPushButton("Add Model")
         self.add_model_button.clicked.connect(self.add_model)
@@ -866,6 +869,7 @@ class ModelPickerWidget(QVBoxLayout):
         self.button_layout.addWidget(self.add_model_button)
         self.button_layout.addWidget(self.remove_model_button)
 
+        self.addLayout(self.dropdown_layout)
         self.addLayout(self.button_layout)
 
     def add_model(self):

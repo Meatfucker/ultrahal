@@ -123,7 +123,7 @@ class QwenImageInpaintTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        loras = await self.avernus_client.list_flux_loras()
+        loras = await self.avernus_client.list_qwen_image_loras()
         self.lora_list.insertItems(0, loras)
 
 class QwenImageInpaintRequest:
