@@ -45,7 +45,7 @@ class LlmTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.submit_button.setDisabled(True)
+        #self.submit_button.setDisabled(True)
         input_text = self.text_input.toPlainText()
         model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRequest(self.avernus_client, self, input_text, model_name)

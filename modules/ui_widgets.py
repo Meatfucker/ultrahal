@@ -8,10 +8,12 @@ from pydub import AudioSegment
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView, QGraphicsScene,
                                QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog, QSlider, QWidget,
                                QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout, QLayout, QComboBox,
-                               QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem, QPlainTextEdit)
-from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont
-from PySide6.QtCore import Qt, QSize, QUrl, QFileInfo, QMimeData, QTimer, Signal
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+                               QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem, QPlainTextEdit, QToolBar,
+                               QStyle, QGraphicsWidget)
+from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont, QIcon, QImage
+from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QFileInfo, QMimeData, QTimer, Signal, Slot, QRectF
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
+from PySide6.QtMultimediaWidgets import QVideoWidget, QGraphicsVideoItem
 
 
 
@@ -308,6 +310,182 @@ class ClickablePixmap(QGraphicsPixmapItem):
         if file_path:
             self.original_pixmap.save(file_path)
 
+class ClickableVideo(QGraphicsWidget):
+    def __init__(self, video_path: str, prompt: str, parent=None):
+        super().__init__(parent)
+        self.video_path = video_path
+        self.prompt = prompt
+        self._aspect_ratio = 16 / 9
+
+
+
+        self._video_item = QGraphicsVideoItem(self)
+        self._audio_output = QAudioOutput()
+        self._player = QMediaPlayer()
+        self._player.setAudioOutput(self._audio_output)
+        self._video_sink = QVideoSink()
+        self._player.setVideoSink(self._video_sink)
+        self._video_sink.videoFrameChanged.connect(self._on_frame_changed)
+        self._player.setVideoOutput(self._video_item)
+
+        # pixmap overlay for poster image
+        self._poster_item = QGraphicsPixmapItem(self)
+        self._poster_item.setZValue(1)  # above video
+        self._poster_item.setVisible(False)
+        self._player.mediaStatusChanged.connect(self._on_media_status_changed)
+
+        self._controls_widget = QWidget()
+        self._controls_widget.setContentsMargins(0, 0, 0, 0)
+        controls_layout = QHBoxLayout(self._controls_widget)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(0)
+
+        style = self._controls_widget.style()
+
+        self._prompt_label = QLabel(self.prompt)
+        self._prompt_label.setAlignment(Qt.AlignCenter)
+        self._prompt_label.setWordWrap(True)
+
+        self._prompt_proxy = QGraphicsProxyWidget(self)
+        self._prompt_proxy.setWidget(self._prompt_label)
+
+        self._play_button = QPushButton()
+        self._play_button.setIcon(QIcon.fromTheme("media-playback-start",
+                                                  style.standardIcon(QStyle.SP_MediaPlay)))
+        self._play_button.clicked.connect(self._toggle_playback)
+        controls_layout.addWidget(self._play_button)
+
+
+        self._controls_proxy = QGraphicsProxyWidget(self)
+        self._controls_proxy.setContentsMargins(0, 0, 0, 0)
+        self._controls_proxy.setWidget(self._controls_widget)
+
+        self.load_video(self.video_path)
+
+    def resizeEvent(self, event):
+        w = self.geometry().width()
+        h = self.geometry().height()
+
+        # figure out how much space prompt + controls need
+        prompt_height = self._prompt_label.sizeHint().height()
+        controls_height = self._controls_widget.sizeHint().height()
+        video_area_height = h - (prompt_height + controls_height)
+
+        # maintain aspect ratio for video
+        video_w = w
+        video_h = w / self._aspect_ratio
+        if video_h > video_area_height:  # too tall, fit height instead
+            video_h = video_area_height
+            video_w = video_area_height * self._aspect_ratio
+
+        # --- place elements ---
+        # prompt label at top
+        self._prompt_proxy.setGeometry(QRectF(0, 0, w, prompt_height))
+
+        # video below prompt
+        self._video_item.setSize(QSizeF(video_w, video_h))
+        self._video_item.setPos((w - video_w) / 2, prompt_height)
+
+        # controls at bottom
+        self._controls_proxy.setGeometry(QRectF(0, h - controls_height, w, controls_height))
+        self._resize_poster()
+
+        super().resizeEvent(event)
+
+    # --- Media handling ---
+    def load_video(self, video_path: str):
+        url = QUrl.fromLocalFile(video_path)
+        self._player.setSource(url)
+
+    def _toggle_playback(self):
+        if self._player.playbackState() == QMediaPlayer.PlayingState:
+            self._player.pause()
+            self._play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        else:
+            self._player.play()
+            self._play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+
+    def _on_media_status_changed(self, status):
+        if status == QMediaPlayer.LoadedMedia:
+            size = self._video_item.nativeSize()
+            if not size.isEmpty():
+                self._aspect_ratio = size.width() / size.height()
+                self.update()
+
+            # seek to middle to grab poster
+            if self._player.duration() > 0:
+                middle = self._player.duration() // 2
+                self._player.setPosition(middle)
+                # after position reached, a frame will be emitted
+                QTimer.singleShot(200, self._capture_poster_frame)  # give it a moment
+
+        if status == QMediaPlayer.EndOfMedia:
+            self._poster_item.setVisible(True)
+
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            self.show_context_menu(event.screenPos())
+        else:
+            super().mousePressEvent(event)
+
+    def show_context_menu(self, global_pos):
+        menu = QMenu()
+        save_action = menu.addAction("Save As...")
+        copy_action = menu.addAction("Copy")
+
+        action = menu.exec(global_pos)
+        if action == save_action:
+            self.save_dialog()
+        if action == copy_action:
+            self.copy_to_clipboard()
+
+    def save_dialog(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save",
+            "wan.mp4",
+            "MP4 (*.mp4)"
+        )
+        if file_path:
+            try:
+                shutil.copyfile(self.video_path, file_path)
+            except Exception as e:
+                print(f"Failed to save video file: {e}")
+
+    def copy_to_clipboard(self):
+        clipboard = QApplication.clipboard()
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile(self.video_path)])
+        clipboard.setMimeData(mime_data)
+
+    def _capture_poster_frame(self):
+        # pause so it doesn't start playing
+        self._player.pause()
+
+    def _on_frame_changed(self, frame):
+        if frame.isValid():
+            image = frame.toImage()
+            if not image.isNull():
+                pixmap = QPixmap.fromImage(image)
+                self._poster_item.setPixmap(pixmap)
+                self._poster_item.setVisible(True)
+                self._resize_poster()
+                # disconnect after capturing one frame to avoid updating on every frame
+                self._video_sink.videoFrameChanged.disconnect(self._on_frame_changed)
+
+    def _resize_poster(self):
+        if self._poster_item.pixmap().isNull():
+            return
+        video_rect = QRectF(self._video_item.pos(),
+                            QSizeF(self._video_item.size()))
+        self._poster_item.setPos(video_rect.topLeft())
+        self._poster_item.setScale(
+            min(video_rect.width() / self._poster_item.pixmap().width(),
+                video_rect.height() / self._poster_item.pixmap().height())
+        )
+
+
 class Console(QHBoxLayout):
     def __init__(self):
         super().__init__()
@@ -378,6 +556,7 @@ class ImageGalleryViewer(QGraphicsView):
     def add_item(self, item: QGraphicsItem):
         self.gallery.addItem(item)
 
+
     def tile_images(self):
         cur_x = 0
         cur_y = 0
@@ -396,7 +575,11 @@ class ImageGalleryViewer(QGraphicsView):
             elif isinstance(item, ClickableAudio):
                 widget = item.widget()
                 widget.setFixedWidth(tile_width)
-                widget.adjustSize()  # allow height to adapt
+                widget.adjustSize()
+            elif isinstance(item, ClickableVideo):
+                tile_height = tile_width / item._aspect_ratio + item._controls_proxy.geometry().height()
+                item.resize(tile_width, tile_height)
+
             else:
                 continue  # unsupported type
 
@@ -454,9 +637,8 @@ class ImageInputBox(QHBoxLayout):
         clipboard = QApplication.clipboard()
         mimeData = clipboard.mimeData()
         if mimeData.hasImage():
-            clipboard.setPixmap(QPixmap(mimeData.imageData()))
-            self.input_image = clipboard.pixmap()
-            self.image_view.add_pixmap(clipboard.pixmap())
+            self.input_image = QPixmap(mimeData.imageData())
+            self.image_view.add_pixmap(self.input_image)
 
 class LLMHistoryWidget(QScrollArea):
     def __init__(self, tab):
@@ -672,7 +854,6 @@ class ModelPickerWidget(QVBoxLayout):
 
         self.model_list_picker = QComboBox()
         self.model_list_picker.insertItems(0, self.data_list)
-        self.model_list_picker.setMaximumWidth(200)
         self.model_list_picker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.model_list_picker.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.addWidget(self.model_list_picker)
@@ -1018,15 +1199,15 @@ class QueueViewer(QScrollArea):
                 widget.deleteLater()
 
 class ResolutionInput(QWidget):
-    def __init__(self):
+    def __init__(self, placeholder_x="1024", placeholder_y="1024"):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.swap_button = QPushButton("↕")
         self.swap_button.setFixedWidth(20)
         self.swap_button.clicked.connect(self.swap_resolution)
         self.swap_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.width_label = SingleLineInputBox("Width:", placeholder_text="1024")
-        self.height_label = SingleLineInputBox("Height:", placeholder_text="1024")
+        self.width_label = SingleLineInputBox("Width:", placeholder_text=placeholder_x)
+        self.height_label = SingleLineInputBox("Height:", placeholder_text=placeholder_y)
 
         layout = QHBoxLayout(self)
         self.input_layout = QVBoxLayout()

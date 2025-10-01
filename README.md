@@ -2,7 +2,7 @@
 
 This is a simple pyside6 GUI client for interfacing with the avernus API server which can be obtained here: https://github.com/Meatfucker/avernus
 
-It has a llm chat, sdxl generation, and flux-dev generation. 
+It has a llm chat, sdxl generation, flux-dev, qwen-image, wan, and ace generation. 
 
 In the image generation mode images can be clicked to full screen them or right clicked for more options
 
@@ -17,6 +17,6 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 
 # TODO:
 
-- Add video pipelines
 - Add options for sorting the gallery
 - Figure out why flux fills outpainting still seems to not work
+- Add sketching options to inpainting

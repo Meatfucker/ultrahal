@@ -17,6 +17,7 @@ from modules.sdxl_inpaint_tab import SdxlInpaintTab
 from modules.queue import QueueTab
 from modules.qwen_tab import QwenTab
 from modules.qwen_image_inpaint_tab import QwenImageInpaintTab
+from modules.wan_tab import WanTab
 
 
 class MainWindow(QWidget):
@@ -35,6 +36,8 @@ class MainWindow(QWidget):
         self.avernus_label = QLabel("Avernus URL:")
         self.avernus_entry = QLineEdit(text="localhost")
         self.avernus_entry.returnPressed.connect(self.update_avernus_url)
+        self.avernus_port_label = QLabel("Port:")
+        self.avernus_port_entry = QLineEdit(text="6969")
         self.avernus_current_server = QLabel(f"Current Server: {self.avernus_url}")
         self.avernus_button = QPushButton("Update URL")
         self.avernus_button.clicked.connect(self.update_avernus_url)
@@ -55,10 +58,13 @@ class MainWindow(QWidget):
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
+        self.wan_tab = WanTab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
         self.avernus_layout.addWidget(self.avernus_entry)
+        self.avernus_layout.addWidget(self.avernus_port_label)
+        self.avernus_layout.addWidget(self.avernus_port_entry)
         self.avernus_layout.addWidget(self.avernus_current_server)
         self.avernus_layout.addWidget(self.avernus_button)
 
@@ -72,6 +78,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.ace_tab, "ACE")
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
+        self.tabs.addTab(self.wan_tab, "Wan")
 
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)
@@ -81,7 +88,8 @@ class MainWindow(QWidget):
     @asyncSlot()
     async def update_avernus_url(self):
         self.avernus_url = self.avernus_entry.text()
-        await self.avernus_client.update_url(self.avernus_url)
+        self.avernus_port = int(self.avernus_port_entry.text())
+        await self.avernus_client.update_url(self.avernus_url, self.avernus_port)
         self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
         print(f"Avernus URL Updated: {self.avernus_url}")
         status = await self.avernus_client.check_status()
