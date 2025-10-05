@@ -20,3 +20,6 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add options for sorting the gallery
 - Figure out why flux fills outpainting still seems to not work
 - Add sketching options to inpainting
+- expose more llm generation options
+- figure out solution for proliferating number of tabs
+- fix fucky video display with long prompts, video gallery item in general needs work.

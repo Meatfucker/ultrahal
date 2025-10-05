@@ -610,28 +610,34 @@ class ImageInputBox(QHBoxLayout):
         self.default_image_path = default_image_path
         self.image_file_path = None
 
-        self.enable_checkbox = QCheckBox(f"Enable {name} input")
+        self.resolution_label = QLabel("")
+        self.enable_checkbox = QCheckBox(f"Enable {name}")
         self.paste_image_button = QPushButton("Paste")
         self.paste_image_button.clicked.connect(self.paste_image)
         self.load_image_button = QPushButton("Load")
         self.load_image_button.clicked.connect(self.load_image)
         self.image_view = ScalingImageView()
         self.input_image = QPixmap("assets/chili.png")
-        self.image_view.add_pixmap(self.input_image)
         self.image_layout = QVBoxLayout()
         self.enable_layout = QHBoxLayout()
+        self.enable_layout.addWidget(self.resolution_label)
         self.enable_layout.addWidget(self.enable_checkbox)
         self.enable_layout.addWidget(self.paste_image_button)
         self.enable_layout.addWidget(self.load_image_button)
         self.image_layout.addLayout(self.enable_layout)
         self.image_layout.addWidget(self.image_view)
         self.addLayout(self.image_layout)
+        self.load_image(default_image_path)
 
-    def load_image(self):
-        self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
+    def load_image(self, file_path=None):
+        if file_path is None:
+            self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
+        else:
+            self.image_file_path = file_path
         if self.image_file_path != "":
             self.input_image = QPixmap(self.image_file_path)
             self.image_view.add_pixmap(self.input_image)
+            self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
 
     def paste_image(self):
         clipboard = QApplication.clipboard()
@@ -639,6 +645,7 @@ class ImageInputBox(QHBoxLayout):
         if mimeData.hasImage():
             self.input_image = QPixmap(mimeData.imageData())
             self.image_view.add_pixmap(self.input_image)
+            self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
 
 class LLMHistoryWidget(QScrollArea):
     def __init__(self, tab):

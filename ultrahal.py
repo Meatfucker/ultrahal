@@ -17,6 +17,7 @@ from modules.sdxl_inpaint_tab import SdxlInpaintTab
 from modules.queue import QueueTab
 from modules.qwen_tab import QwenTab
 from modules.qwen_image_inpaint_tab import QwenImageInpaintTab
+from modules.qwen_edit_plus_tab import QwenEditPlusTab
 from modules.wan_tab import WanTab
 
 
@@ -58,6 +59,7 @@ class MainWindow(QWidget):
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
+        self.qwen_edit_tab = QwenEditPlusTab(self.avernus_client, self.tabs)
         self.wan_tab = WanTab(self.avernus_client, self.tabs)
 
         self.avernus_layout = QHBoxLayout()
@@ -78,6 +80,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.ace_tab, "ACE")
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
+        self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit")
         self.tabs.addTab(self.wan_tab, "Wan")
 
         self.layout = QVBoxLayout()
@@ -103,6 +106,7 @@ class MainWindow(QWidget):
         await self.flux_inpaint_tab.make_lora_list()
         await self.flux_fill_tab.make_lora_list()
         await self.qwen_tab.make_lora_list()
+        await self.qwen_edit_tab.make_lora_list()
         await self.qwen_inpaint_tab.make_lora_list()
 
     @asyncSlot()
