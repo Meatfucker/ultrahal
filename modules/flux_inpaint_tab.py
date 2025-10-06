@@ -5,7 +5,8 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget, QSizePolicy
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ClickablePixmap
+from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ClickablePixmap,
+                                ModelPickerWidget)
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxInpaintTab(QWidget):
@@ -22,6 +23,7 @@ class FluxInpaintTab(QWidget):
 
         self.clear_mask_button = QPushButton("Clear Mask")
         self.clear_mask_button.clicked.connect(self.paint_area.clear)
+        self.model_picker = ModelPickerWidget("flux-dev")
         self.brush_size_slider = HorizontalSlider("Brush Size", 1, 127, 10, enable_ticks=False)
         self.brush_size_slider.slider.valueChanged.connect(self.set_brush_size)
         self.load_button = QPushButton("Load Image")
@@ -53,6 +55,7 @@ class FluxInpaintTab(QWidget):
 
         self.paint_layout.addWidget(self.paint_area)
 
+        self.config_layout.addLayout(self.model_picker)
         self.config_layout.addLayout(self.brush_size_slider)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
@@ -79,6 +82,7 @@ class FluxInpaintTab(QWidget):
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
         seed = self.seed_label.input.text()
+        model_name = self.model_picker.model_list_picker.currentText()
         lora_items = self.lora_list.selectedItems()
         lora_name = "<None>"
         if lora_items:
@@ -105,7 +109,8 @@ class FluxInpaintTab(QWidget):
                                          height=height,
                                          image=self.paint_area.original_image,
                                          mask_image=self.paint_area.original_mask,
-                                         strength=strength)
+                                         strength=strength,
+                                         model_name=model_name)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#2F2452")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -124,7 +129,7 @@ class FluxInpaintTab(QWidget):
 
 class FluxInpaintRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale, seed,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name):
+                 enhance_prompt, width, height, image, mask_image, strength, lora_name, model_name):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -133,6 +138,7 @@ class FluxInpaintRequest:
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
         self.seed = seed
+        self.model_name = model_name
         self.lora_name = lora_name
         self.enhance_prompt = enhance_prompt
         self.queue_info = None
@@ -179,6 +185,7 @@ class FluxInpaintRequest:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
+                kwargs["model_name"] = str(self.model_name)
                 base64_images = await self.avernus_client.flux_inpaint_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
@@ -186,6 +193,7 @@ class FluxInpaintRequest:
                 print(f"FLUX INPAINT EXCEPTION: {e}")
         else:
             try:
+                kwargs["model_name"] = str(self.model_name)
                 base64_images = await self.avernus_client.flux_inpaint_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)

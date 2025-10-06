@@ -9,7 +9,7 @@ from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout,
 from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox, ResolutionInput,
-                                ClickablePixmap)
+                                ClickablePixmap, ModelPickerWidget)
 from modules.utils import base64_to_images, image_to_base64
 
 class FluxTab(QWidget):
@@ -32,6 +32,7 @@ class FluxTab(QWidget):
                     }
                 """)
         self.prompt_label = ParagraphInputBox("Prompt")
+        self.model_picker = ModelPickerWidget("flux-dev")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
@@ -60,6 +61,7 @@ class FluxTab(QWidget):
 
         self.prompt_layout.addLayout(self.prompt_label)
 
+        self.config_widgets_layout.addLayout(self.model_picker)
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
@@ -98,6 +100,7 @@ class FluxTab(QWidget):
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
         seed = self.seed_label.input.text()
+        model_name = self.model_picker.model_list_picker.currentText()
         lora_items = self.lora_list.selectedItems()
         lora_name = "<None>"
         if lora_items:
@@ -145,7 +148,8 @@ class FluxTab(QWidget):
                                   enhance_prompt=enhance_prompt,
                                   guidance_scale=guidance_scale,
                                   seed=seed,
-                                  add_artist=add_artist)
+                                  add_artist=add_artist,
+                                  model_name=model_name)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1A103D")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -179,7 +183,7 @@ class FluxTab(QWidget):
 class FluxRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
                  strength, ip_adapter_strength, i2i_image_enabled, guidance_scale, seed, i2i_image, ip_adapter_enabled,
-                 ip_adapter_image, kontext_enabled, kontext_image, enhance_prompt, add_artist):
+                 ip_adapter_image, kontext_enabled, kontext_image, enhance_prompt, add_artist, model_name):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -190,6 +194,7 @@ class FluxRequest:
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
         self.seed = seed
+        self.model_name = model_name
         self.lora_name = lora_name
         self.strength = strength
         self.ip_adapter_strength = ip_adapter_strength
@@ -232,7 +237,6 @@ class FluxRequest:
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
 
-
         if self.i2i_image_enabled is True:
             self.i2i_image.save("temp.png", quality=100)
             image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
@@ -265,6 +269,7 @@ class FluxRequest:
                 if self.kontext_enabled is True:
                     base64_images = await self.avernus_client.flux_kontext(self.enhanced_prompt, **kwargs)
                 else:
+                    kwargs["model_name"] = str(self.model_name)
                     base64_images = await self.avernus_client.flux_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
@@ -278,6 +283,7 @@ class FluxRequest:
                 if self.kontext_enabled is True:
                     base64_images = await self.avernus_client.flux_kontext(self.prompt, **kwargs)
                 else:
+                    kwargs["model_name"] = str(self.model_name)
                     base64_images = await self.avernus_client.flux_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
