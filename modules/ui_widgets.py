@@ -370,7 +370,6 @@ class ClickableVideo(QGraphicsWidget):
         self._video_item.setPos(0, prompt_height)
         self._controls_proxy.setGeometry(QRectF(0, h - controls_height, w, controls_height))
         self._player.play()
-        self._player.pause()
 
         super().resizeEvent(event)
 
@@ -605,7 +604,6 @@ class ImageInputBox(QHBoxLayout):
         self.load_image(default_image_path)
 
     def load_image(self, file_path=None):
-        print(f"FILE PATH:{file_path}")
         if file_path is False:
             self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
         else:
