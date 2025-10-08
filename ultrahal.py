@@ -2,8 +2,11 @@ import sys
 import asyncio
 
 import qasync
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
+from modules.ui_widgets import CircleWidget
+
 from qasync import QEventLoop, asyncSlot
 from modules.ace_tab import ACETab
 from modules.avernus_client import AvernusClient
@@ -39,10 +42,15 @@ class MainWindow(QWidget):
         self.avernus_entry.returnPressed.connect(self.update_avernus_url)
         self.avernus_port_label = QLabel("Port:")
         self.avernus_port_entry = QLineEdit(text="6969")
-        self.avernus_current_server = QLabel(f"Current Server: {self.avernus_url}")
+        self.avernus_port_entry.returnPressed.connect(self.update_avernus_url)
+        self.avernus_current_server = QLabel(f"Current Server:{self.avernus_url}")
+        self.avernus_online_label = CircleWidget()
         self.avernus_button = QPushButton("Update URL")
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.update_avernus_url()
+        self.server_check_timer = QTimer(self)
+        self.server_check_timer.timeout.connect(self.check_status)
+        self.server_check_timer.start(10000)
 
         self.tabs = QTabWidget()
         self.gallery_tab = GalleryTab(self.avernus_client, self)
@@ -68,6 +76,7 @@ class MainWindow(QWidget):
         self.avernus_layout.addWidget(self.avernus_port_label)
         self.avernus_layout.addWidget(self.avernus_port_entry)
         self.avernus_layout.addWidget(self.avernus_current_server)
+        self.avernus_layout.addWidget(self.avernus_online_label)
         self.avernus_layout.addWidget(self.avernus_button)
 
 
@@ -95,19 +104,9 @@ class MainWindow(QWidget):
         await self.avernus_client.update_url(self.avernus_url, self.avernus_port)
         self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
         print(f"Avernus URL Updated: {self.avernus_url}")
-        status = await self.avernus_client.check_status()
-        print(status)
-        await self.sdxl_tab.make_lora_list()
-        await self.sdxl_tab.make_controlnet_list()
-        await self.sdxl_tab.make_scheduler_list()
-        await self.sdxl_inpaint_tab.make_lora_list()
-        await self.sdxl_inpaint_tab.make_scheduler_list()
-        await self.flux_tab.make_lora_list()
-        await self.flux_inpaint_tab.make_lora_list()
-        await self.flux_fill_tab.make_lora_list()
-        await self.qwen_tab.make_lora_list()
-        await self.qwen_edit_tab.make_lora_list()
-        await self.qwen_inpaint_tab.make_lora_list()
+        await self.check_status()
+        await self.update_lists()
+
 
     @asyncSlot()
     async def process_request_queue(self):
@@ -123,6 +122,29 @@ class MainWindow(QWidget):
                     await queue_request.run()
                 except Exception as e:
                     print(f"Exception while processing request: {e}")
+
+    @asyncSlot()
+    async def check_status(self):
+        status = await self.avernus_client.check_status()
+        if status.get("status") == "Ok!":
+            self.avernus_online_label.set_color(1)
+        else:
+            self.avernus_online_label.set_color(0)
+
+    @asyncSlot()
+    async def update_lists(self):
+        await self.sdxl_tab.make_lora_list()
+        await self.sdxl_tab.make_controlnet_list()
+        await self.sdxl_tab.make_scheduler_list()
+        await self.sdxl_inpaint_tab.make_lora_list()
+        await self.sdxl_inpaint_tab.make_scheduler_list()
+        await self.flux_tab.make_lora_list()
+        await self.flux_inpaint_tab.make_lora_list()
+        await self.flux_fill_tab.make_lora_list()
+        await self.qwen_tab.make_lora_list()
+        await self.qwen_edit_tab.make_lora_list()
+        await self.qwen_inpaint_tab.make_lora_list()
+
 
     def closeEvent(self, event):
         QApplication.quit()

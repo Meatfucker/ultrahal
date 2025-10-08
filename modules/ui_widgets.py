@@ -17,6 +17,43 @@ from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
 from PySide6.QtMultimediaWidgets import QVideoWidget, QGraphicsVideoItem
 
 
+class CircleWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_green = False
+        self.setFixedSize(QSize(20, 20))
+
+    def toggle_color(self):
+        """Toggle between green and red."""
+        self.is_green = not self.is_green
+        self.update()  # Trigger a repaint
+
+    def set_color(self, state):
+        if state == 1:
+            self.is_green = True
+        else:
+            self.is_green = False
+        self.update()
+
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Choose color based on state
+        color = QColor("green") if self.is_green else QColor("red")
+        painter.setBrush(color)
+        painter.setPen(Qt.NoPen)
+
+        # Draw the circle centered in the widget
+        rect = self.rect()
+        diameter = min(rect.width(), rect.height()) - 10  # Padding
+        x = (rect.width() - diameter) // 2
+        y = (rect.height() - diameter) // 2
+
+        painter.drawEllipse(x, y, diameter, diameter)
+
+
 
 class ClickableAudio(QGraphicsProxyWidget):
     def __init__(self, audio_path: str, prompt, lyrics, gallery):
@@ -370,6 +407,7 @@ class ClickableVideo(QGraphicsWidget):
         self._video_item.setPos(0, prompt_height)
         self._controls_proxy.setGeometry(QRectF(0, h - controls_height, w, controls_height))
         self._player.play()
+        self._player.pause()
 
         super().resizeEvent(event)
 
