@@ -24,6 +24,8 @@ class QwenImageInpaintTab(QWidget):
         self.clear_mask_button.clicked.connect(self.paint_area.clear)
         self.brush_size_slider = HorizontalSlider("Brush Size", 1, 127, 10, enable_ticks=False)
         self.brush_size_slider.slider.valueChanged.connect(self.set_brush_size)
+        self.paste_button = QPushButton("Paste Image")
+        self.paste_button.clicked.connect(self.paint_area.paste_image)
         self.load_button = QPushButton("Load Image")
         self.load_button.clicked.connect(self.paint_area.load_image)
         self.strength_slider = HorizontalSlider("Replace %", 0, 100, 70, enable_ticks=False)
@@ -41,6 +43,7 @@ class QwenImageInpaintTab(QWidget):
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
+        self.enable_nunchaku_checkbox = QCheckBox("Enable Nunchaku")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="4.0")
@@ -55,6 +58,7 @@ class QwenImageInpaintTab(QWidget):
         self.paint_layout.addWidget(self.paint_area)
 
         self.config_layout.addLayout(self.brush_size_slider)
+        self.config_layout.addWidget(self.paste_button)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
         self.config_layout.addWidget(self.clear_mask_button)
@@ -64,6 +68,7 @@ class QwenImageInpaintTab(QWidget):
         self.config_layout.addLayout(self.config_widgets_layout)
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
+        self.config_widgets_layout.addWidget(self.enable_nunchaku_checkbox)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.true_cfg_scale_label)
@@ -89,6 +94,7 @@ class QwenImageInpaintTab(QWidget):
             for lora_list_item in lora_items:
                 lora_name.append(lora_list_item.text())
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        nunchaku_enabled = self.enable_nunchaku_checkbox.isChecked()
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
         strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
@@ -109,7 +115,8 @@ class QwenImageInpaintTab(QWidget):
                                               height=height,
                                               image=self.paint_area.original_image,
                                               mask_image=self.paint_area.original_mask,
-                                              strength=strength)
+                                              strength=strength,
+                                              nunchaku_enabled=nunchaku_enabled)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#124232")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -128,7 +135,7 @@ class QwenImageInpaintTab(QWidget):
 
 class QwenImageInpaintRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, true_cfg_scale, seed,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name):
+                 enhance_prompt, width, height, image, mask_image, strength, lora_name, nunchaku_enabled):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -140,6 +147,7 @@ class QwenImageInpaintRequest:
         self.seed = seed
         self.lora_name = lora_name
         self.enhance_prompt = enhance_prompt
+        self.nunchaku_enabled = nunchaku_enabled
         self.queue_info = None
         self.image = image
         self.mask_image = mask_image
@@ -185,14 +193,20 @@ class QwenImageInpaintRequest:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
-                base64_images = await self.avernus_client.qwen_image_inpaint_image(self.enhanced_prompt, **kwargs)
+                if self.nunchaku_enabled is True:
+                    base64_images = await self.avernus_client.qwen_image_inpaint_nunchaku_image(self.enhanced_prompt, **kwargs)
+                else:
+                    base64_images = await self.avernus_client.qwen_image_inpaint_image(self.enhanced_prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
                 print(f"QWEN IMAGE INPAINT EXCEPTION: {e}")
         else:
             try:
-                base64_images = await self.avernus_client.qwen_image_inpaint_image(self.prompt, **kwargs)
+                if self.nunchaku_enabled is True:
+                    base64_images = await self.avernus_client.qwen_image_inpaint_nunchaku_image(self.prompt, **kwargs)
+                else:
+                    base64_images = await self.avernus_client.qwen_image_inpaint_image(self.prompt, **kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:

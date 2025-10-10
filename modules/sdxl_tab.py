@@ -10,7 +10,7 @@ from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
                                 SingleLineInputBox, ClickablePixmap)
-from modules.utils import base64_to_images, image_to_base64
+from modules.utils import base64_to_images, image_to_base64, get_csv_tags
 
 class SdxlTab(QWidget):
     def __init__(self, avernus_client, tabs):
@@ -39,6 +39,8 @@ class SdxlTab(QWidget):
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
+        self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
+        self.danbooru_tags_slider = HorizontalSlider("Num Tags", 1, 20, 6, enable_ticks=False)
         self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
@@ -71,6 +73,8 @@ class SdxlTab(QWidget):
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
+        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
         self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
@@ -137,6 +141,8 @@ class SdxlTab(QWidget):
             controlnet_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         add_artist = self.add_random_artist_checkbox.isChecked()
+        add_danbooru_tags = self.add_random_danbooru_tags_checkbox.isChecked()
+        danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
 
         try:
             request = SDXLRequest(avernus_client=self.avernus_client,
@@ -162,6 +168,8 @@ class SdxlTab(QWidget):
                                   controlnet_image=controlnet_image,
                                   enhance_prompt=enhance_prompt,
                                   add_artist=add_artist,
+                                  add_danbooru_tags=add_danbooru_tags,
+                                  danbooru_tags_amount=danbooru_tags_amount,
                                   model_name=model_name,
                                   scheduler=scheduler,
                                   seed=seed)
@@ -196,11 +204,13 @@ class SDXLRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
                  lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength, controlnet_processor,
                  i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled,
-                 controlnet_image, enhance_prompt, model_name, scheduler, seed, add_artist):
+                 controlnet_image, enhance_prompt, model_name, scheduler, seed, add_artist, add_danbooru_tags,
+                 danbooru_tags_amount):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.width = width
         self.height = height
@@ -223,6 +233,8 @@ class SDXLRequest:
         self.controlnet_image = controlnet_image
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
+        self.add_danbooru_tags = add_danbooru_tags
+        self.danbooru_tags_amount = danbooru_tags_amount
         if self.width == "":
             self.width = 1024
         if self.height == "":
@@ -278,27 +290,22 @@ class SDXLRequest:
                 kwargs["controlnet_conditioning"] = float(self.controlnet_strength)
 
         if self.enhance_prompt is True:
-            self.enhanced_prompt = await self.avernus_client.llm_chat(
+            llm_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-            if self.add_artist is True:
-                random_artist_prompt = await self.get_random_artist_prompt()
-                self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
-            try:
-                base64_images = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"SDXL REQUEST EXCEPTION: {e}")
-        else:
-            if self.add_artist is True:
-                random_artist_prompt = await self.get_random_artist_prompt()
-                self.prompt = f"{random_artist_prompt}. {self.prompt}"
-            try:
-                base64_images = await self.avernus_client.sdxl_image(self.prompt, **kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"SDXL REQUEST EXCEPTION: {e}")
+            self.enhanced_prompt = llm_prompt
+        if self.add_artist is True:
+            random_artist_prompt = await self.get_random_artist_prompt()
+            self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
+        if self.add_danbooru_tags is True:
+            danbooru_tags = get_csv_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
+            self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
+
+        try:
+            base64_images = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
+            images = await base64_to_images(base64_images)
+            await self.display_images(images)
+        except Exception as e:
+            print(f"SDXL REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):

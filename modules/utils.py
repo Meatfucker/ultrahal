@@ -1,5 +1,7 @@
 import base64
+import csv
 import io
+import random
 from PIL import Image
 
 
@@ -19,3 +21,36 @@ def image_to_base64(image_path, width, height):
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+
+def get_csv_tags(csv_path: str, n: int) -> str:
+    """
+    Loads a CSV file, randomly selects n lines (excluding the header if present),
+    and returns the first value from each selected line combined into a single string.
+
+    Args:
+        csv_path (str): Path to the CSV file.
+        n (int): Number of random lines to select.
+
+    Returns:
+        str: Combined string of first values from the selected lines.
+    """
+    with open(csv_path, newline='', encoding='utf-8') as f:
+        reader = list(csv.reader(f))
+
+        # If there's a header row, optionally detect and skip it
+        # (You can remove this if you always want to include the first line)
+        if all(not cell.isdigit() for cell in reader[0]):  # crude header detection
+            data = reader[1:]
+        else:
+            data = reader
+
+        # Handle case where n > available lines
+        n = min(n, len(data))
+
+        # Randomly select rows
+        selected_rows = random.sample(data, n)
+
+        # Extract first values and join them
+        first_values = [row[0] for row in selected_rows if row]
+        return ' '.join(first_values)

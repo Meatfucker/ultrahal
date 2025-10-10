@@ -21,4 +21,4 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Figure out why flux fills outpainting still seems to not work
 - Add sketching options to inpainting
 - figure out solution for proliferating number of tabs - tabs evidently scroll, maybe just say fuck it?
-- fix fucky video display with long prompts, video gallery item in general needs work.
+- maybe make coding specific llm interface option?

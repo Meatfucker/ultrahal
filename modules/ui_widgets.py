@@ -233,6 +233,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
         self.flux_fill_tab = self.tabs.widget(7)
         self.qwen_image_tab = self.tabs.widget(9)
         self.qwen_image_inpaint_tab = self.tabs.widget(10)
+        self.qwen_image_edit_tab = self.tabs.widget(11)
+        self.wan_tab = self.tabs.widget(12)
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
@@ -280,6 +282,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
         flux_inpaint_menu = menu.addMenu("Flux Inpaint")
         qwen_menu = menu.addMenu("Qwen")
         qwen_inpaint_menu = menu.addMenu("Qwen Inpaint")
+        qwen_image_edit_menu = menu.addMenu("Qwen Edit")
+        wan_menu = menu.addMenu("Wan")
         sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
         sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
         sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
@@ -292,6 +296,10 @@ class ClickablePixmap(QGraphicsPixmapItem):
         qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
         qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
         qwen_image_send_to_inpaint = qwen_inpaint_menu.addAction("Send to Qwen Image Inpaint")
+        qwen_image_edit_send_to_1 = qwen_image_edit_menu.addAction("Send to image 1")
+        qwen_image_edit_send_to_2 = qwen_image_edit_menu.addAction("Send to image 2")
+        qwen_image_edit_send_to_3 = qwen_image_edit_menu.addAction("Send to image 3")
+        wan_send_to_i2v = wan_menu.addAction("Send to Wan")
 
 
         action = menu.exec(global_pos)
@@ -337,6 +345,20 @@ class ClickablePixmap(QGraphicsPixmapItem):
             self.qwen_image_tab.edit_image_label.image_view.add_pixmap(self.original_pixmap)
         if action == qwen_image_send_to_inpaint:
             self.qwen_image_inpaint_tab.paint_area.set_image(self.original_pixmap)
+        if action == qwen_image_edit_send_to_1:
+            self.qwen_image_edit_tab.edit_image_1_label.input_image = self.original_pixmap
+            self.qwen_image_edit_tab.edit_image_1_label.image_view.add_pixmap(self.original_pixmap)
+        if action == qwen_image_edit_send_to_2:
+            self.qwen_image_edit_tab.edit_image_2_label.input_image = self.original_pixmap
+            self.qwen_image_edit_tab.edit_image_2_label.image_view.add_pixmap(self.original_pixmap)
+        if action == qwen_image_edit_send_to_3:
+            self.qwen_image_edit_tab.edit_image_3_label.input_image = self.original_pixmap
+            self.qwen_image_edit_tab.edit_image_3_label.image_view.add_pixmap(self.original_pixmap)
+
+        if action == wan_send_to_i2v:
+            self.wan_tab.i2v_image_label.input_image = self.original_pixmap
+            self.wan_tab.i2v_image_label.image_view.add_pixmap(self.original_pixmap)
+
 
     def save_image_dialog(self):
         file_path, _ = QFileDialog.getSaveFileName(
@@ -360,6 +382,7 @@ class ClickableVideo(QGraphicsWidget):
         self._audio_output = QAudioOutput()
 
         self._player = QMediaPlayer()
+        self._player.setLoops(QMediaPlayer.Loops.Infinite)
         self._player.setAudioOutput(self._audio_output)
         self._player.setVideoOutput(self._video_item)
         self._player.mediaStatusChanged.connect(self._on_media_status_changed)
@@ -1082,6 +1105,15 @@ class PainterWidget(QWidget):
         self.original_image = pixmap
         self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
         self.resize_image()
+
+    def paste_image(self):
+        clipboard = QApplication.clipboard()
+        mimeData = clipboard.mimeData()
+        if mimeData.hasImage():
+            self.original_image = QPixmap(mimeData.imageData())
+            self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
+            self.resize_image()
+            self.update()
 
     def update_cursor(self):
         size = self.pen.width() * 2

@@ -53,6 +53,7 @@ class MainWindow(QWidget):
         self.server_check_timer.start(10000)
 
         self.tabs = QTabWidget()
+        self.tabs.setMovable(True)
         self.gallery_tab = GalleryTab(self.avernus_client, self)
         self.queue_tab = QueueTab(self.avernus_client, self)
         self.tabs.addTab(self.gallery_tab, "Gallery")

@@ -26,6 +26,8 @@ class FluxInpaintTab(QWidget):
         self.model_picker = ModelPickerWidget("flux-dev")
         self.brush_size_slider = HorizontalSlider("Brush Size", 1, 127, 10, enable_ticks=False)
         self.brush_size_slider.slider.valueChanged.connect(self.set_brush_size)
+        self.paste_button = QPushButton("Paste Image")
+        self.paste_button.clicked.connect(self.paint_area.paste_image)
         self.load_button = QPushButton("Load Image")
         self.load_button.clicked.connect(self.paint_area.load_image)
         self.strength_slider = HorizontalSlider("Replace %", 0, 100, 70, enable_ticks=False)
@@ -57,6 +59,7 @@ class FluxInpaintTab(QWidget):
 
         self.config_layout.addLayout(self.model_picker)
         self.config_layout.addLayout(self.brush_size_slider)
+        self.config_layout.addWidget(self.paste_button)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addLayout(self.strength_slider)
         self.config_layout.addWidget(self.clear_mask_button)

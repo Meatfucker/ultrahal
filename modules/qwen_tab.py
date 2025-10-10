@@ -37,6 +37,7 @@ class QwenTab(QWidget):
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
+        self.enable_nunchaku_checkbox = QCheckBox("Enable Nunchaku")
         self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
@@ -63,6 +64,7 @@ class QwenTab(QWidget):
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
+        self.config_widgets_layout.addWidget(self.enable_nunchaku_checkbox)
         self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
@@ -115,6 +117,7 @@ class QwenTab(QWidget):
             edit_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         add_artist = self.add_random_artist_checkbox.isChecked()
+        nunchaku_enabled = self.enable_nunchaku_checkbox.isChecked()
 
         try:
             request = QwenRequest(avernus_client=self.avernus_client,
@@ -135,7 +138,8 @@ class QwenTab(QWidget):
                                   enhance_prompt=enhance_prompt,
                                   true_cfg_scale=true_cfg_scale,
                                   seed=seed,
-                                  add_artist=add_artist)
+                                  add_artist=add_artist,
+                                  nunchaku_enabled=nunchaku_enabled)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#023222")
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -169,7 +173,7 @@ class QwenTab(QWidget):
 class QwenRequest:
     def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
                  lora_name, strength, i2i_image_enabled, true_cfg_scale, seed, i2i_image, edit_enabled, edit_image,
-                 enhance_prompt, add_artist):
+                 enhance_prompt, add_artist, nunchaku_enabled):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -189,7 +193,8 @@ class QwenRequest:
         self.edit_image = edit_image
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
-        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},EDIT:{self.edit_enabled}"
+        self.nunchaku_enabled = nunchaku_enabled
+        self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},EDIT:{self.edit_enabled},NUNCHAKU:{self.nunchaku_enabled}"
         if self.width == "":
             self.width = 1024
         if self.height == "":
@@ -245,9 +250,15 @@ class QwenRequest:
             kwargs["prompt"] = self.enhanced_prompt
             try:
                 if self.edit_enabled is True:
-                    base64_images = await self.avernus_client.qwen_image_edit(**kwargs)
+                    if self.nunchaku_enabled is True:
+                        base64_images = await self.avernus_client.qwen_image_edit_nunchaku(**kwargs)
+                    else:
+                        base64_images = await self.avernus_client.qwen_image_edit(**kwargs)
                 else:
-                    base64_images = await self.avernus_client.qwen_image_image(**kwargs)
+                    if self.nunchaku_enabled is True:
+                        base64_images = await self.avernus_client.qwen_image_nunchaku_image(**kwargs)
+                    else:
+                        base64_images = await self.avernus_client.qwen_image_image(**kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
@@ -259,9 +270,15 @@ class QwenRequest:
             kwargs["prompt"] = self.prompt
             try:
                 if self.edit_enabled is True:
-                    base64_images = await self.avernus_client.qwen_image_edit(**kwargs)
+                    if self.nunchaku_enabled is True:
+                        base64_images = await self.avernus_client.qwen_image_edit_nunchaku(**kwargs)
+                    else:
+                        base64_images = await self.avernus_client.qwen_image_edit(**kwargs)
                 else:
-                    base64_images = await self.avernus_client.qwen_image_image(**kwargs)
+                    if self.nunchaku_enabled is True:
+                        base64_images = await self.avernus_client.qwen_image_nunchaku_image(**kwargs)
+                    else:
+                        base64_images = await self.avernus_client.qwen_image_image(**kwargs)
                 images = await base64_to_images(base64_images)
                 await self.display_images(images)
             except Exception as e:
