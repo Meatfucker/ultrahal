@@ -48,9 +48,6 @@ class MainWindow(QWidget):
         self.avernus_button = QPushButton("Update URL")
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.update_avernus_url()
-        self.server_check_timer = QTimer(self)
-        self.server_check_timer.timeout.connect(self.check_status)
-        self.server_check_timer.start(10000)
 
         self.tabs = QTabWidget()
         self.tabs.setMovable(True)

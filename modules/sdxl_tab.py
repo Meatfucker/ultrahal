@@ -10,7 +10,7 @@ from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
                                 SingleLineInputBox, ClickablePixmap)
-from modules.utils import base64_to_images, image_to_base64, get_csv_tags
+from modules.utils import base64_to_images, image_to_base64, get_csv_tags, get_generic_danbooru_tags
 
 class SdxlTab(QWidget):
     def __init__(self, avernus_client, tabs):
@@ -297,7 +297,7 @@ class SDXLRequest:
             random_artist_prompt = await self.get_random_artist_prompt()
             self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
         if self.add_danbooru_tags is True:
-            danbooru_tags = get_csv_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
+            danbooru_tags = get_generic_danbooru_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 
         try:

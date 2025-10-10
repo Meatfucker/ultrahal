@@ -54,3 +54,19 @@ def get_csv_tags(csv_path: str, n: int) -> str:
         # Extract first values and join them
         first_values = [row[0] for row in selected_rows if row]
         return ' '.join(first_values)
+
+
+def get_generic_danbooru_tags(csv_path, num_lines, category="0"):
+    with open(csv_path, newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        filtered_rows = [row for row in reader if len(row) > 1 and row[1].strip() == category]
+
+    if not filtered_rows:
+        return ""
+
+    selected_rows = random.sample(filtered_rows, min(num_lines, len(filtered_rows)))
+    print(selected_rows)
+
+    combined_string = " ".join(row[0] for row in selected_rows)
+
+    return combined_string
