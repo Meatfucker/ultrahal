@@ -1,6 +1,6 @@
 # ultrahal
 
-This is a simple pyside6 GUI client for interfacing with the avernus API server which can be obtained here: https://github.com/Meatfucker/avernus
+This is a pyside6 GUI client for interfacing with the avernus API server which can be obtained here: https://github.com/Meatfucker/avernus
 
 It has a llm chat, sdxl generation, flux-dev, qwen-image, wan, and ace generation. 
 
@@ -20,5 +20,5 @@ Run either start_ultrahal.bat or start_ultrahal.sh
 - Add options for sorting the gallery
 - Figure out why flux fills outpainting still seems to not work
 - Add sketching options to inpainting
-- figure out solution for proliferating number of tabs - tabs evidently scroll, maybe just say fuck it?
 - maybe make coding specific llm interface option?
+- add upscalers

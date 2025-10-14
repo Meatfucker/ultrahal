@@ -2,35 +2,39 @@ import asyncio
 import json
 import random
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QListWidget, QListWidgetItem,
-                                QPushButton, QVBoxLayout, QWidget, QSizePolicy)
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                                QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
-                                SingleLineInputBox, ClickablePixmap)
-from modules.utils import base64_to_images, image_to_base64, get_csv_tags, get_generic_danbooru_tags
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget,
+                                ParagraphInputBox, QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox,
+                                VerticalTabWidget)
+from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags
+
 
 class SdxlTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#12001b"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.model_picker = ModelPickerWidget("sdxl")
@@ -103,6 +107,7 @@ class SdxlTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
+        self.queue_color: str = "#12001b"
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
@@ -126,16 +131,19 @@ class SdxlTab(QWidget):
         controlnet_processor = self.controlnet_list.currentText()
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
+            self.queue_color: str = "#240036"
             i2i_image = self.i2i_image_label.input_image
         else:
             i2i_image = None
         ip_adapter_enable = self.ipadapter_image_label.enable_checkbox.isChecked()
         if ip_adapter_enable is True:
+            self.queue_color: str = "#370051"
             ip_adapter_image = self.ipadapter_image_label.input_image
         else:
             ip_adapter_image = None
         controlnet_enable = self.controlnet_image_label.enable_checkbox.isChecked()
         if controlnet_enable is True:
+            self.queue_color: str = "#40005f"
             controlnet_image = self.controlnet_image_label.input_image
         else:
             controlnet_image = None
@@ -173,7 +181,7 @@ class SdxlTab(QWidget):
                                   model_name=model_name,
                                   scheduler=scheduler,
                                   seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1E3A5F")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -200,12 +208,37 @@ class SdxlTab(QWidget):
         for scheduler in schedulers:
             self.scheduler_list.addItem(scheduler)
 
+
 class SDXLRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
-                 lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength, controlnet_processor,
-                 i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image, controlnet_enabled,
-                 controlnet_image, enhance_prompt, model_name, scheduler, seed, add_artist, add_danbooru_tags,
-                 danbooru_tags_amount):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 negative_prompt: str,
+                 width: str,
+                 height: str,
+                 steps: str,
+                 batch_size: str,
+                 lora_name: list,
+                 guidance_scale: str,
+                 strength: float,
+                 ip_adapter_strength: float,
+                 controlnet_strength: float,
+                 controlnet_processor: str,
+                 i2i_image_enabled: bool,
+                 i2i_image: QPixmap,
+                 ip_adapter_enabled: bool,
+                 ip_adapter_image: QPixmap,
+                 controlnet_enabled: bool,
+                 controlnet_image: QPixmap,
+                 enhance_prompt: bool,
+                 model_name: str,
+                 scheduler: str,
+                 seed: str,
+                 add_artist: bool,
+                 add_danbooru_tags: bool,
+                 danbooru_tags_amount: int):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -239,6 +272,7 @@ class SDXLRequest:
             self.width = 1024
         if self.height == "":
             self.height = 1024
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.controlnet_enabled}"
 
     async def run(self):
@@ -269,19 +303,19 @@ class SDXLRequest:
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
 
-        if self.i2i_image_enabled is True:
+        if self.i2i_image_enabled:
             self.i2i_image.save("temp.png", quality=100)
             image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if self.strength != "":
                 kwargs["strength"] = float(self.strength)
-        if self.ip_adapter_enabled is True:
+        if self.ip_adapter_enabled:
             self.ip_adapter_image.save("temp.png", quality=100)
             ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if self.ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
-        if self.controlnet_enabled is True:
+        if self.controlnet_enabled:
             self.controlnet_image.save("temp.png", quality=100)
             controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["controlnet_image"] = str(controlnet_image)
@@ -289,14 +323,14 @@ class SDXLRequest:
             if self.controlnet_strength != "":
                 kwargs["controlnet_conditioning"] = float(self.controlnet_strength)
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             llm_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             self.enhanced_prompt = llm_prompt
-        if self.add_artist is True:
+        if self.add_artist:
             random_artist_prompt = await self.get_random_artist_prompt()
             self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
-        if self.add_danbooru_tags is True:
+        if self.add_danbooru_tags:
             danbooru_tags = get_generic_danbooru_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 

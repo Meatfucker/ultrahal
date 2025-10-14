@@ -2,35 +2,39 @@ import asyncio
 import json
 import random
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
-                                QListWidget, QSizePolicy)
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                                QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (HorizontalSlider, ImageInputBox, ParagraphInputBox, SingleLineInputBox, ResolutionInput,
-                                ClickablePixmap, ModelPickerWidget)
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget,
+                                ParagraphInputBox, QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox,
+                                VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class FluxTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#002f39"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.model_picker = ModelPickerWidget("flux-dev")
         self.lora_list = QListWidget()
@@ -47,7 +51,6 @@ class FluxTab(QWidget):
         self.ipadapter_image_label = ImageInputBox(self, "IP Adapter", "assets/chili.png")
         self.ipadapter_strength_label = HorizontalSlider("Strength", 0, 100, 60, enable_ticks=False)
         self.kontext_image_label = ImageInputBox(self, "Kontext", "assets/chili.png")
-
 
         self.main_layout = QHBoxLayout()
         self.input_layout = QVBoxLayout()
@@ -93,6 +96,7 @@ class FluxTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
+        self.queue_color: str = "#002f39"
         prompt = self.prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
         height = self.resolution_widget.height_label.input.text()
@@ -112,6 +116,7 @@ class FluxTab(QWidget):
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
             i2i_image = self.i2i_image_label.input_image
+            self.queue_color = "#004f5f"
         else:
             i2i_image = None
         ip_adapter_enable = self.ipadapter_image_label.enable_checkbox.isChecked()
@@ -122,6 +127,7 @@ class FluxTab(QWidget):
         kontext_enable = self.kontext_image_label.enable_checkbox.isChecked()
         if kontext_enable is True:
             kontext_image = self.kontext_image_label.input_image
+            self.queue_color ="#006f85"
         else:
             kontext_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
@@ -150,7 +156,7 @@ class FluxTab(QWidget):
                                   seed=seed,
                                   add_artist=add_artist,
                                   model_name=model_name)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1A103D")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -181,13 +187,34 @@ class FluxTab(QWidget):
 
 
 class FluxRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
-                 strength, ip_adapter_strength, i2i_image_enabled, guidance_scale, seed, i2i_image, ip_adapter_enabled,
-                 ip_adapter_image, kontext_enabled, kontext_image, enhance_prompt, add_artist, model_name):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 width: str,
+                 height: str,
+                 steps: str,
+                 batch_size: str,
+                 lora_name: list,
+                 strength: float,
+                 ip_adapter_strength: float,
+                 i2i_image_enabled: bool,
+                 guidance_scale: str,
+                 seed: str,
+                 i2i_image: QPixmap,
+                 ip_adapter_enabled: bool,
+                 ip_adapter_image: QPixmap,
+                 kontext_enabled: bool,
+                 kontext_image: QPixmap,
+                 enhance_prompt: bool,
+                 add_artist: bool,
+                 model_name: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = None
         self.width = width
         self.height = height
         self.steps = steps
@@ -206,6 +233,7 @@ class FluxRequest:
         self.kontext_image = kontext_image
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled},IPA:{self.ip_adapter_enabled},CN:{self.kontext_enabled}"
         if self.width == "":
             self.width = 1024
@@ -237,19 +265,19 @@ class FluxRequest:
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
 
-        if self.i2i_image_enabled is True:
+        if self.i2i_image_enabled:
             self.i2i_image.save("temp.png", quality=100)
             image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if self.strength != "":
                 kwargs["strength"] = float(self.strength)
-        if self.ip_adapter_enabled is True:
+        if self.ip_adapter_enabled:
             self.ip_adapter_image.save("temp.png", quality=100)
             ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if self.ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
-        if self.kontext_enabled is True:
+        if self.kontext_enabled:
             self.kontext_image.save("temp.png", quality=100)
             kontext_width = int(self.kontext_image.width())
             kontext_height = int(self.kontext_image.height())
@@ -259,14 +287,14 @@ class FluxRequest:
             kwargs["height"] = None
 
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-            if self.add_artist is True:
+            if self.add_artist:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
             try:
-                if self.kontext_enabled is True:
+                if self.kontext_enabled:
                     base64_images = await self.avernus_client.flux_kontext(self.enhanced_prompt, **kwargs)
                 else:
                     kwargs["model_name"] = str(self.model_name)
@@ -276,11 +304,11 @@ class FluxRequest:
             except Exception as e:
                 print(f"FLUX EXCEPTION: {e}")
         else:
-            if self.add_artist is True:
+            if self.add_artist:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.prompt = f"{random_artist_prompt}. {self.prompt}"
             try:
-                if self.kontext_enabled is True:
+                if self.kontext_enabled:
                     base64_images = await self.avernus_client.flux_kontext(self.prompt, **kwargs)
                 else:
                     kwargs["model_name"] = str(self.model_name)

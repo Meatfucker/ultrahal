@@ -2,35 +2,38 @@ import asyncio
 import json
 import random
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget,
-                                QListWidget, QSizePolicy)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                               QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (ImageInputBox, ParagraphInputBox, SingleLineInputBox, ResolutionInput,
-                                ClickablePixmap)
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, ImageGallery, ImageInputBox, ParagraphInputBox, QueueObjectWidget,
+                                QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class QwenEditPlusTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#004900"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-            QPushButton {
-                font-size: 20px;
-            }
-        """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()
@@ -38,6 +41,7 @@ class QwenEditPlusTab(QWidget):
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.enable_nunchaku_checkbox = QCheckBox("Enable Nunchaku")
+        self.enable_nunchaku_checkbox.setChecked(True)
         self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
@@ -130,7 +134,7 @@ class QwenEditPlusTab(QWidget):
                                           seed=seed,
                                           add_artist=add_artist,
                                           nunchaku_enabled=nunchaku_enabled)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#629282")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -145,12 +149,28 @@ class QwenEditPlusTab(QWidget):
 
 
 class QwenEditPlusRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
-                 lora_name, images, true_cfg_scale, seed, enhance_prompt, add_artist, nunchaku_enabled):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 negative_prompt: str,
+                 width: str,
+                 height: str,
+                 steps: str,
+                 batch_size: str,
+                 lora_name: list,
+                 images: list,
+                 true_cfg_scale: str,
+                 seed: str,
+                 enhance_prompt: bool,
+                 add_artist: bool,
+                 nunchaku_enabled: bool):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = None
         self.negative_prompt = negative_prompt
         self.width = width
         self.height = height
@@ -163,6 +183,7 @@ class QwenEditPlusRequest:
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
         self.nunchaku_enabled = nunchaku_enabled
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},NUNCHAKU:{self.nunchaku_enabled}"
         if self.width == "":
             self.width = 1024
@@ -178,7 +199,6 @@ class QwenEditPlusRequest:
         elapsed_time = end_time - start_time
         self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
-
 
     @asyncSlot()
     async def generate(self):
@@ -206,15 +226,15 @@ class QwenEditPlusRequest:
             bas64_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
             kwargs["images"].append(bas64_image)
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-            if self.add_artist is True:
+            if self.add_artist:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
             kwargs["prompt"] = self.enhanced_prompt
             try:
-                if self.nunchaku_enabled is True:
+                if self.nunchaku_enabled:
                     base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
                 else:
                     base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)
@@ -223,12 +243,12 @@ class QwenEditPlusRequest:
             except Exception as e:
                 print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
         else:
-            if self.add_artist is True:
+            if self.add_artist:
                 random_artist_prompt = await self.get_random_artist_prompt()
                 self.prompt = f"{random_artist_prompt}. {self.prompt}"
             kwargs["prompt"] = self.prompt
             try:
-                if self.nunchaku_enabled is True:
+                if self.nunchaku_enabled:
                     base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
                 else:
                     base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)

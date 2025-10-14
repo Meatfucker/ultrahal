@@ -1,22 +1,31 @@
 import asyncio
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget, QSizePolicy
+from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                               QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ClickablePixmap
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, PainterWidget, ParagraphInputBox,
+                                QueueObjectWidget, QueueViewer, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class QwenImageInpaintTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#003900"
 
         self.paint_area = PainterWidget()
 
@@ -33,17 +42,14 @@ class QwenImageInpaintTab(QWidget):
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.enable_nunchaku_checkbox = QCheckBox("Enable Nunchaku")
+        self.enable_nunchaku_checkbox.setChecked(True)
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="4.0")
@@ -117,7 +123,7 @@ class QwenImageInpaintTab(QWidget):
                                               mask_image=self.paint_area.original_mask,
                                               strength=strength,
                                               nunchaku_enabled=nunchaku_enabled)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#124232")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -133,13 +139,31 @@ class QwenImageInpaintTab(QWidget):
         loras = await self.avernus_client.list_qwen_image_loras()
         self.lora_list.insertItems(0, loras)
 
+
 class QwenImageInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, true_cfg_scale, seed,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, nunchaku_enabled):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 negative_prompt: str,
+                 steps: str,
+                 batch_size: str,
+                 true_cfg_scale: str,
+                 seed: str,
+                 enhance_prompt: bool,
+                 width: str,
+                 height: str,
+                 image: QPixmap,
+                 mask_image: QPixmap,
+                 strength: float,
+                 lora_name: list,
+                 nunchaku_enabled: bool):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = None
         self.negative_prompt = negative_prompt
         self.steps = steps
         self.batch_size = batch_size
@@ -154,6 +178,7 @@ class QwenImageInpaintRequest:
         self.width = width
         self.height = height
         self.strength = strength
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
@@ -165,7 +190,6 @@ class QwenImageInpaintRequest:
         elapsed_time = end_time - start_time
         self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
-
 
     @asyncSlot()
     async def generate(self):
@@ -189,11 +213,11 @@ class QwenImageInpaintRequest:
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
-                if self.nunchaku_enabled is True:
+                if self.nunchaku_enabled:
                     base64_images = await self.avernus_client.qwen_image_inpaint_nunchaku_image(self.enhanced_prompt, **kwargs)
                 else:
                     base64_images = await self.avernus_client.qwen_image_inpaint_image(self.enhanced_prompt, **kwargs)
@@ -203,7 +227,7 @@ class QwenImageInpaintRequest:
                 print(f"QWEN IMAGE INPAINT EXCEPTION: {e}")
         else:
             try:
-                if self.nunchaku_enabled is True:
+                if self.nunchaku_enabled:
                     base64_images = await self.avernus_client.qwen_image_inpaint_nunchaku_image(self.prompt, **kwargs)
                 else:
                     base64_images = await self.avernus_client.qwen_image_inpaint_image(self.prompt, **kwargs)

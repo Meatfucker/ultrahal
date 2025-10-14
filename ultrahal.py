@@ -2,12 +2,12 @@ import sys
 import asyncio
 
 import qasync
-from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
-from modules.ui_widgets import CircleWidget
-
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout,
+                               QWidget, QStyleFactory)
 from qasync import QEventLoop, asyncSlot
+
+from modules.ui_widgets import CircleWidget, VerticalTabWidget
 from modules.ace_tab import ACETab
 from modules.avernus_client import AvernusClient
 from modules.flux_fill_tab import FluxFillTab
@@ -22,6 +22,7 @@ from modules.qwen_tab import QwenTab
 from modules.qwen_image_inpaint_tab import QwenImageInpaintTab
 from modules.qwen_edit_plus_tab import QwenEditPlusTab
 from modules.wan_tab import WanTab
+from modules.wan_vace_tab import WanVACETab
 
 
 class MainWindow(QWidget):
@@ -29,12 +30,13 @@ class MainWindow(QWidget):
         super().__init__()
         self.setWindowTitle("UltraHal")
         self.resize(1280, 800)
-        self.avernus_url = "localhost"
-        self.avernus_client = AvernusClient(self.avernus_url)
+        self.avernus_url: str = "localhost"
+        self.avernus_port: int = 6969
+        self.avernus_client: AvernusClient = AvernusClient(self.avernus_url)
         self.loop = qasync.QEventLoop(self)
-        self.pending_requests = []
+        self.pending_requests: list = []
         self.request_event = asyncio.Event()
-        self.request_currently_processing = False
+        self.request_currently_processing: bool = False
         self.process_request_queue()
 
         self.avernus_label = QLabel("Avernus URL:")
@@ -49,24 +51,39 @@ class MainWindow(QWidget):
         self.avernus_button.clicked.connect(self.update_avernus_url)
         self.update_avernus_url()
 
-        self.tabs = QTabWidget()
-        self.tabs.setMovable(True)
+        self.tabs = VerticalTabWidget()
+
         self.gallery_tab = GalleryTab(self.avernus_client, self)
         self.queue_tab = QueueTab(self.avernus_client, self)
         self.tabs.addTab(self.gallery_tab, "Gallery")
         self.tabs.addTab(self.queue_tab, "Queue")
 
-        self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
-        self.sdxl_tab = SdxlTab(self.avernus_client, self.tabs)
-        self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
+        self.ace_tab = ACETab(self.avernus_client, self.tabs)
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
-        self.ace_tab = ACETab(self.avernus_client, self.tabs)
+        self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
         self.qwen_edit_tab = QwenEditPlusTab(self.avernus_client, self.tabs)
         self.wan_tab = WanTab(self.avernus_client, self.tabs)
+        self.wan_vace_tab = WanVACETab(self.avernus_client, self.tabs)
+        self.sdxl_tab = SdxlTab(self.avernus_client, self.tabs)
+        self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
+
+
+        self.tabs.addTab(self.ace_tab, "ACE")
+        self.tabs.addTab(self.flux_tab, "Flux")
+        self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
+        self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
+        self.tabs.addTab(self.llm_chat_tab, "LLM")
+        self.tabs.addTab(self.qwen_tab, "Qwen")
+        self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
+        self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit+")
+        self.tabs.addTab(self.sdxl_tab, "SDXL")
+        self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
+        self.tabs.addTab(self.wan_tab, "Wan")
+        self.tabs.addTab(self.wan_vace_tab, "Wan VACE")
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -77,23 +94,11 @@ class MainWindow(QWidget):
         self.avernus_layout.addWidget(self.avernus_online_label)
         self.avernus_layout.addWidget(self.avernus_button)
 
-
-        self.tabs.addTab(self.llm_chat_tab, "LLM")
-        self.tabs.addTab(self.sdxl_tab, "SDXL")
-        self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
-        self.tabs.addTab(self.flux_tab, "Flux")
-        self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
-        self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
-        self.tabs.addTab(self.ace_tab, "ACE")
-        self.tabs.addTab(self.qwen_tab, "Qwen")
-        self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
-        self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit")
-        self.tabs.addTab(self.wan_tab, "Wan")
-
         self.layout = QVBoxLayout()
         self.layout.addLayout(self.avernus_layout)
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
+        self.setStyle(QStyleFactory.create("Fusion"))
 
     @asyncSlot()
     async def update_avernus_url(self):

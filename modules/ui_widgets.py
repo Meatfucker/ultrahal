@@ -4,23 +4,23 @@ import sys
 import shutil
 import tempfile
 
+import cv2
 from pydub import AudioSegment
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QGraphicsView,
                                QGraphicsScene, QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog,
                                QSlider, QWidget, QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout,
                                QLayout, QComboBox, QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem,
-                               QPlainTextEdit, QToolBar, QStyle, QGraphicsWidget)
-from PySide6.QtGui import (QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont, QIcon, QImage,
-                           QResizeEvent)
-from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QFileInfo, QMimeData, QTimer, Signal, Slot, QRectF
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
-from PySide6.QtMultimediaWidgets import QVideoWidget, QGraphicsVideoItem
+                               QPlainTextEdit, QStyle, QGraphicsWidget, QListWidget, QStackedWidget, QListWidgetItem)
+from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont, QIcon, QImage
+from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QMimeData, Signal, QRectF
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 
 
 class CircleWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.is_green = False
+        self.is_green: bool = False
         self.setFixedSize(QSize(20, 20))
 
     def toggle_color(self):
@@ -56,12 +56,11 @@ class CircleWidget(QWidget):
 
 
 class ClickableAudio(QGraphicsProxyWidget):
-    def __init__(self, audio_path: str, prompt, lyrics, gallery):
+    def __init__(self, audio_path: str, prompt: str, lyrics: str):
         super().__init__()
-        self.audio_path = audio_path
-        self.prompt = prompt
-        self.lyrics = lyrics
-        self.gallery = gallery
+        self.audio_path: str = audio_path
+        self.prompt: str = prompt
+        self.lyrics: str = lyrics
 
         widget = QWidget()
         layout = QVBoxLayout()
@@ -222,19 +221,20 @@ class ClickableAudio(QGraphicsProxyWidget):
 
 
 class ClickablePixmap(QGraphicsPixmapItem):
-    def __init__(self, original_pixmap, gallery, tabs):
+    def __init__(self, original_pixmap: QPixmap, gallery, tabs):
         super().__init__(original_pixmap)
         self.tabs = tabs
-        self.queue_tab = self.tabs.widget(1)
-        self.sdxl_tab = self.tabs.widget(3)
-        self.sdxl_inpaint_tab = self.tabs.widget(4)
-        self.flux_tab = self.tabs.widget(5)
-        self.flux_inpaint_tab = self.tabs.widget(6)
-        self.flux_fill_tab = self.tabs.widget(7)
-        self.qwen_image_tab = self.tabs.widget(9)
-        self.qwen_image_inpaint_tab = self.tabs.widget(10)
-        self.qwen_image_edit_tab = self.tabs.widget(11)
-        self.wan_tab = self.tabs.widget(12)
+        self.queue_tab = self.tabs.named_widget("Queue")
+        self.sdxl_tab = self.tabs.named_widget("SDXL")
+        self.sdxl_inpaint_tab = self.tabs.named_widget("SDXL Inpaint")
+        self.flux_tab = self.tabs.named_widget("Flux")
+        self.flux_inpaint_tab = self.tabs.named_widget("Flux Inpaint")
+        self.flux_fill_tab = self.tabs.named_widget("Flux Fill")
+        self.qwen_image_tab = self.tabs.named_widget("Qwen")
+        self.qwen_image_inpaint_tab = self.tabs.named_widget("Qwen Inpaint")
+        self.qwen_image_edit_tab = self.tabs.named_widget("Qwen Edit+")
+        self.wan_tab = self.tabs.named_widget("Wan")
+        self.wan_vace_tab = self.tabs.named_widget("Wan VACE")
         self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
@@ -276,30 +276,30 @@ class ClickablePixmap(QGraphicsPixmapItem):
         menu = QMenu()
         save_action = menu.addAction("Save Image As...")
         copy_action = menu.addAction("Copy Image")
+
         sdxl_menu = menu.addMenu("SDXL")
-        sdxl_inpaint_menu = menu.addMenu("SDXL Inpaint")
         flux_menu = menu.addMenu("Flux")
-        flux_inpaint_menu = menu.addMenu("Flux Inpaint")
         qwen_menu = menu.addMenu("Qwen")
-        qwen_inpaint_menu = menu.addMenu("Qwen Inpaint")
-        qwen_image_edit_menu = menu.addMenu("Qwen Edit")
         wan_menu = menu.addMenu("Wan")
+
         sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
         sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
         sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
-        sdxl_send_to_inpaint = sdxl_inpaint_menu.addAction("Send to SDXL Inpaint")
+        sdxl_send_to_inpaint = sdxl_menu.addAction("Send to SDXL Inpaint")
         flux_send_to_i2i = flux_menu.addAction("Send to I2I")
         flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
         flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
-        flux_send_to_inpaint = flux_inpaint_menu.addAction("Send to Flux Inpaint")
-        flux_send_to_fill = flux_inpaint_menu.addAction("Send to Flux Fill")
+        flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
+        flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
         qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
         qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
-        qwen_image_send_to_inpaint = qwen_inpaint_menu.addAction("Send to Qwen Image Inpaint")
-        qwen_image_edit_send_to_1 = qwen_image_edit_menu.addAction("Send to image 1")
-        qwen_image_edit_send_to_2 = qwen_image_edit_menu.addAction("Send to image 2")
-        qwen_image_edit_send_to_3 = qwen_image_edit_menu.addAction("Send to image 3")
-        wan_send_to_i2v = wan_menu.addAction("Send to Wan")
+        qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")
+        qwen_image_edit_send_to_1 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 1")
+        qwen_image_edit_send_to_2 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 2")
+        qwen_image_edit_send_to_3 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 3")
+        wan_send_to_i2v = wan_menu.addAction("Send to Wan I2V")
+        wan_vace_send_to_first_frame = wan_menu.addAction("Send to WAN VACE First Frame")
+        wan_vace_send_to_last_frame = wan_menu.addAction("Send to WAN VACE Last Frame")
 
 
         action = menu.exec(global_pos)
@@ -310,27 +310,21 @@ class ClickablePixmap(QGraphicsPixmapItem):
             clipboard.setPixmap(self.original_pixmap)
 
         if action == sdxl_send_to_i2i:
-            self.sdxl_tab.i2i_image_label.input_image = self.original_pixmap
-            self.sdxl_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.sdxl_tab.i2i_image_label.load_pixmap(self.original_pixmap)
         if action == sdxl_send_to_ipadapter:
-            self.sdxl_tab.ipadapter_image_label.input_image = self.original_pixmap
-            self.sdxl_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.sdxl_tab.ipadapter_image_label.load_pixmap(self.original_pixmap)
         if action == sdxl_sent_to_controlnet:
-            self.sdxl_tab.controlnet_image_label.input_image = self.original_pixmap
-            self.sdxl_tab.controlnet_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.sdxl_tab.controlnet_image_label.load_pixmap(self.original_pixmap)
 
         if action == sdxl_send_to_inpaint:
             self.sdxl_inpaint_tab.paint_area.set_image(self.original_pixmap)
 
         if action == flux_send_to_i2i:
-            self.flux_tab.i2i_image_label.input_image = self.original_pixmap
-            self.flux_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.flux_tab.i2i_image_label.load_pixmap(self.original_pixmap)
         if action == flux_send_to_ipadapter:
-            self.flux_tab.ipadapter_image_label.input_image = self.original_pixmap
-            self.flux_tab.ipadapter_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.flux_tab.ipadapter_image_label.load_pixmap(self.original_pixmap)
         if action == flux_sent_to_kontext:
-            self.flux_tab.kontext_image_label.input_image = self.original_pixmap
-            self.flux_tab.kontext_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.flux_tab.kontext_image_label.load_pixmap(self.original_pixmap)
 
         if action == flux_send_to_inpaint:
             self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
@@ -338,26 +332,24 @@ class ClickablePixmap(QGraphicsPixmapItem):
             self.flux_fill_tab.paint_area.set_image(self.original_pixmap)
 
         if action == qwen_image_send_to_i2i:
-            self.qwen_image_tab.i2i_image_label.input_image = self.original_pixmap
-            self.qwen_image_tab.i2i_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.qwen_image_tab.i2i_image_label.load_pixmap(self.original_pixmap)
         if action == qwen_image_send_to_edit:
-            self.qwen_image_tab.edit_image_label.input_image = self.original_pixmap
-            self.qwen_image_tab.edit_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.qwen_image_tab.edit_image_label.load_pixmap(self.original_pixmap)
         if action == qwen_image_send_to_inpaint:
             self.qwen_image_inpaint_tab.paint_area.set_image(self.original_pixmap)
         if action == qwen_image_edit_send_to_1:
-            self.qwen_image_edit_tab.edit_image_1_label.input_image = self.original_pixmap
-            self.qwen_image_edit_tab.edit_image_1_label.image_view.add_pixmap(self.original_pixmap)
+            self.qwen_image_edit_tab.edit_image_1_label.load_pixmap(self.original_pixmap)
         if action == qwen_image_edit_send_to_2:
-            self.qwen_image_edit_tab.edit_image_2_label.input_image = self.original_pixmap
-            self.qwen_image_edit_tab.edit_image_2_label.image_view.add_pixmap(self.original_pixmap)
+            self.qwen_image_edit_tab.edit_image_2_label.load_pixmap(self.original_pixmap)
         if action == qwen_image_edit_send_to_3:
-            self.qwen_image_edit_tab.edit_image_3_label.input_image = self.original_pixmap
-            self.qwen_image_edit_tab.edit_image_3_label.image_view.add_pixmap(self.original_pixmap)
+            self.qwen_image_edit_tab.edit_image_3_label.load_pixmap(self.original_pixmap)
 
         if action == wan_send_to_i2v:
-            self.wan_tab.i2v_image_label.input_image = self.original_pixmap
-            self.wan_tab.i2v_image_label.image_view.add_pixmap(self.original_pixmap)
+            self.wan_tab.i2v_image_label.load_pixmap(self.original_pixmap)
+        if action == wan_vace_send_to_first_frame:
+            self.wan_vace_tab.first_frame_label.load_pixmap(self.original_pixmap)
+        if action == wan_vace_send_to_last_frame:
+            self.wan_vace_tab.last_frame_label.load_pixmap(self.original_pixmap)
 
 
     def save_image_dialog(self):
@@ -541,7 +533,7 @@ class HorizontalSlider(QHBoxLayout):
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(min)
         self.slider.setMaximum(max)
-        if enable_ticks is True:
+        if enable_ticks:
             self.slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
             self.slider.setTickInterval(interval)
         self.slider.setValue(default)
@@ -590,7 +582,6 @@ class ImageGalleryViewer(QGraphicsView):
 
     def add_item(self, item: QGraphicsItem):
         self.gallery.addItem(item)
-
 
     def tile_images(self):
         cur_x = 0
@@ -667,6 +658,8 @@ class ImageInputBox(QHBoxLayout):
     def load_image(self, file_path=None):
         if file_path is False:
             self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
+            if self.image_file_path == "":
+                return
         else:
             self.image_file_path = file_path
         try:
@@ -676,11 +669,17 @@ class ImageInputBox(QHBoxLayout):
         except Exception as e:
             print(e)
 
+    def load_pixmap(self, pixmap=None):
+        self.input_image = pixmap
+        self.image_view.add_pixmap(self.input_image)
+        self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
+
+
     def paste_image(self):
         clipboard = QApplication.clipboard()
-        mimeData = clipboard.mimeData()
-        if mimeData.hasImage():
-            self.input_image = QPixmap(mimeData.imageData())
+        mimedata = clipboard.mimeData()
+        if mimedata.hasImage():
+            self.input_image = QPixmap(mimedata.imageData())
             self.image_view.add_pixmap(self.input_image)
             self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
 
@@ -698,9 +697,16 @@ class LLMHistoryWidget(QScrollArea):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(2)  # tiny gap between messages
 
+
         self.verticalScrollBar().rangeChanged.connect(
             lambda min_val, max_val: self.verticalScrollBar().setValue(max_val)
         )
+        self.setStyleSheet("""
+                 border: none;
+                 background-color: #25252a;
+                 color: #ddd;
+                 font-size: 14px;
+                 """)
 
     def add_message(self, role, message, hex_color):
         message_item = LLMHistoryObjectWidget(role, message, hex_color)
@@ -757,8 +763,6 @@ class LLMHistoryWidget(QScrollArea):
             w.deleteLater()
 
     def handle_reroll_request(self, widget):
-        # Determine input_text first
-        input_text = None
         index = self.messages.index(widget)
 
         if widget.role == "user":
@@ -1036,6 +1040,7 @@ class PainterWidget(QWidget):
         self.mask_pixmap = QPixmap(self.input_image.size())
         self.mask_pixmap.fill(QColor(0, 0, 0, 0))
         self.original_mask = self.mask_pixmap
+        self.image_file_path = None
 
         self.previous_pos = None
         self.painter = QPainter()
@@ -1108,9 +1113,9 @@ class PainterWidget(QWidget):
 
     def paste_image(self):
         clipboard = QApplication.clipboard()
-        mimeData = clipboard.mimeData()
-        if mimeData.hasImage():
-            self.original_image = QPixmap(mimeData.imageData())
+        mimedata = clipboard.mimeData()
+        if mimedata.hasImage():
+            self.original_image = QPixmap(mimedata.imageData())
             self.original_mask = self.original_mask.scaled(QSize(self.original_image.width(), self.original_image.height()))
             self.resize_image()
             self.update()
@@ -1151,6 +1156,14 @@ class ParagraphInputBox(QVBoxLayout):
         self.addWidget(self.label)
         self.input = QTextEdit(acceptRichText=False)
         self.addWidget(self.input)
+        self.input.setStyleSheet("""
+             QTextEdit {
+                 border: none;
+                 background-color: #25252a;
+                 color: #ddd;
+                 font-size: 14px;
+             }
+         """)
 
 class QueueObjectWidget(QFrame):
     def __init__(self, queue_object, hex_color, queue_view):
@@ -1252,6 +1265,7 @@ class QueueViewer(QScrollArea):
             item = self.queue_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+
                 widget.setParent(None)
                 widget.deleteLater()
 
@@ -1346,6 +1360,145 @@ class SquareButton(QPushButton):
         font = QFont()
         font.setPointSize(font_size)
         self.setFont(font)
+
+class VerticalTabWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.list = QListWidget()
+        self.stack = QStackedWidget()
+
+        # When user selects a new item in the list, change stacked widget page
+        self.list.currentRowChanged.connect(self.stack.setCurrentIndex)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.list)
+        layout.addWidget(self.stack)
+        self.setLayout(layout)
+        self.setStyleSheet("""
+            QListWidget {
+                border: none;
+                background-color: #25252a;
+                color: #ddd;
+                font-size: 14px;
+            }
+            QListWidget::item:selected {
+                background-color: #444;
+                color: white;
+            }
+        """)
+
+        # Optional style
+        self.list.setFixedWidth(120)
+        self.list.setSpacing(0)
+
+    # ---- API Compatibility with QTabWidget ----
+    def addTab(self, widget: QWidget, label: str, icon: QIcon = None):
+        item = QListWidgetItem(icon, label) if icon else QListWidgetItem(label)
+        self.list.addItem(item)
+        self.stack.addWidget(widget)
+        if self.list.count() == 1:
+            self.list.setCurrentRow(0)
+
+    def insertTab(self, index: int, widget: QWidget, label: str):
+        self.list.insertItem(index, label)
+        self.stack.insertWidget(index, widget)
+
+    def widget(self, index: int) -> QWidget:
+        return self.stack.widget(index)
+
+    def named_widget(self, name: str) -> QWidget | None:
+        for i in range(self.list.count()):
+            item = self.list.item(i)
+            if item.text() == name:
+                return self.stack.widget(i)
+        return None
+
+    def count(self) -> int:
+        return self.stack.count()
+
+    def currentIndex(self) -> int:
+        return self.stack.currentIndex()
+
+    def setCurrentIndex(self, index: int):
+        self.list.setCurrentRow(index)
+        self.stack.setCurrentIndex(index)
+
+    def indexOf(self, widget: QWidget) -> int:
+        return self.stack.indexOf(widget)
+
+    def setTabText(self, index: int, text: str):
+        item = self.list.item(index)
+        if item:
+            item.setText(text)
+
+    def tabText(self, index: int) -> str:
+        item = self.list.item(index)
+        return item.text() if item else ""
+
+    def setTabIcon(self, index: int, icon: QIcon):
+        item = self.list.item(index)
+        if item:
+            item.setIcon(icon)
+
+class VideoInputWidget(QWidget):
+    def __init__(self, name):
+        super().__init__()
+        self.file_path = None
+        layout = QVBoxLayout(self)
+        enable_layout = QHBoxLayout()
+        self.enable_checkbox = QCheckBox(f"Enable {name}")
+        self.load_button = QPushButton("Select Video File")
+        self.load_button.clicked.connect(self.load_video)
+        self.image_label = QLabel("No video selected")
+        self.image_label.setAlignment(Qt.AlignCenter)
+        enable_layout.addWidget(self.enable_checkbox)
+        enable_layout.addWidget(self.load_button)
+        layout.addLayout(enable_layout)
+        layout.addWidget(self.image_label, stretch=1)
+
+    def load_video(self):
+        self.file_path, _ = QFileDialog.getOpenFileName(self,
+                                                   "Select Video File",
+                                                   "",
+                                                   "Video Files (*.mp4 *.avi *.mov *.mkv)")
+        if not self.file_path:
+            return
+        cap = cv2.VideoCapture(self.file_path)
+        if not cap.isOpened():
+            self.image_label.setText("Failed to open video.")
+            return
+
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if frame_count == 0:
+            self.image_label.setText("Empty or invalid video.")
+            cap.release()
+            return
+
+        middle_frame = frame_count // 2
+        cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret:
+            self.image_label.setText("Could not read frame.")
+            return
+
+        # Convert BGR to RGB
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = frame_rgb.shape
+        bytes_per_line = ch * w
+
+        # Convert to QImage
+        qimg = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
+
+        # Display as QPixmap
+        pixmap = QPixmap.fromImage(qimg)
+        scaled_pixmap = pixmap.scaled(
+            self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.image_label.setPixmap(scaled_pixmap)
 
 class WordWrapLabel(QLabel):
     def __init__(self, text="", parent=None):

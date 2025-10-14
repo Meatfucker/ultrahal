@@ -1,21 +1,32 @@
 import asyncio
 import tempfile
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QLabel, QApplication, QSizePolicy
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
+                               QWidget)
 from qasync import asyncSlot
-from modules.ui_widgets import SingleLineInputBox, ClickableAudio
+
+from modules.avernus_client import AvernusClient
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickableAudio, ImageGallery, QueueObjectWidget, QueueViewer, SingleLineInputBox,
+                                VerticalTabWidget)
 
 
 class ACETab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 tabs: VerticalTabWidget):
         super().__init__()
-        self.avernus_client = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.avernus_client: AvernusClient = avernus_client
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.widget(0))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.widget(1))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#25011b"
 
         self.prompt_input = SingleLineInputBox("Prompt")
         self.lyrics_label = QLabel("Lyrics")
@@ -50,7 +61,6 @@ class ACETab(QWidget):
         config_layout.addLayout(self.seed_input)
         config_layout.addStretch()
         config_layout.addWidget(self.submit_button)
-
         main_layout.addLayout(input_layout)
         main_layout.addLayout(config_layout)
         self.setLayout(main_layout)
@@ -64,29 +74,41 @@ class ACETab(QWidget):
         guidance_scale = self.guidance_scale_input.input.text()
         omega_scale = self.omega_scale_input.input.text()
         seed = self.seed_input.input.text()
+
         request = ACERequest(self.avernus_client, self.gallery, self.tabs, prompt, lyrics, length, steps,
                              guidance_scale, omega_scale, seed)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#1F2507")
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
 
 
 class ACERequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, lyrics, length, steps, guidance_scale, omega_scale, seed):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 lyrics: str,
+                 length: str,
+                 steps: str,
+                 guidance_scale: str,
+                 omega_scale: str,
+                 seed: str):
+        self.avernus_client: AvernusClient = avernus_client
+        self.gallery: ImageGallery = gallery
         self.tabs = tabs
-        self.prompt = prompt
-        self.lyrics = lyrics
-        self.length = length
-        self.steps = steps
-        self.guidance_scale = guidance_scale
-        self.omega_scale = omega_scale
-        self.seed = seed
-
-        self.queue_info = None
+        self.prompt: str = prompt
+        self.lyrics: str = lyrics
+        self.length: str = length
+        self.steps: str = steps
+        self.guidance_scale: str = guidance_scale
+        self.omega_scale: str = omega_scale
+        self.seed: str = seed
+        self.ui_item: QueueObjectWidget | None = None
+        #self.queue_info = None
+        self.queue_info = f"Duration:{self.length}s, Steps:{self.steps}, Guidance:{self.guidance_scale}, Omega:{self.omega_scale}"
 
     async def run(self):
         start_time = time.time()
@@ -125,5 +147,5 @@ class ACERequest:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             f.write(audio_bytes)
             f.flush()
-            return ClickableAudio(f.name, self.prompt, self.lyrics, self.gallery.gallery)
+            return ClickableAudio(f.name, self.prompt, self.lyrics)
 

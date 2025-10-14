@@ -1,24 +1,32 @@
 import asyncio
 import time
+from typing import cast
+
 from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget, QSizePolicy
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout,
+                                QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider,
-                                OutpaintingWidget, ClickablePixmap)
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, OutpaintingWidget, PainterWidget,
+                                ParagraphInputBox, QueueObjectWidget, QueueViewer, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class FluxFillTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#1aa8c5"
 
         self.paint_area = PainterWidget()
 
@@ -34,11 +42,7 @@ class FluxFillTab(QWidget):
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
@@ -93,7 +97,7 @@ class FluxFillTab(QWidget):
         if self.outpainting_controls.enable_outpainting_checkbox.isChecked():
             outpainting_pixels = self.outpainting_controls.expand_pixels_input.input.text()
         else:
-            outpainting_pixels = 0
+            outpainting_pixels = "0"
         outpainting_direction = self.outpainting_controls.get_selected_alignment()
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
@@ -117,7 +121,7 @@ class FluxFillTab(QWidget):
                                       seed=seed,
                                       outpainting_pixels=outpainting_pixels,
                                       outpainting_direction=outpainting_direction)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#5F5482")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -134,20 +138,35 @@ class FluxFillTab(QWidget):
         self.lora_list.insertItems(0, loras)
 
 class FluxFillRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, seed, outpainting_pixels,
-                 outpainting_direction):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 steps: str,
+                 batch_size: str,
+                 guidance_scale: str,
+                 enhance_prompt: bool,
+                 width: str,
+                 height: str,
+                 image: QPixmap,
+                 mask_image: QPixmap,
+                 strength: float,
+                 lora_name: list,
+                 seed: str,
+                 outpainting_pixels: str,
+                 outpainting_direction: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = None
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
         self.seed = seed
         self.lora_name = lora_name
         self.enhance_prompt = enhance_prompt
-        self.queue_info = None
         self.image = image
         self.mask_image = mask_image
         self.width = width
@@ -155,6 +174,7 @@ class FluxFillRequest:
         self.strength = strength
         self.outpainting_pixels = outpainting_pixels
         self.outpainting_direction = outpainting_direction
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
@@ -189,8 +209,8 @@ class FluxFillRequest:
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
         if int(self.outpainting_pixels) > 0:
-            pil_image = Image.open("image_temp.png")
-            pil_mask_image = Image.open("mask_temp.png")
+            #pil_image = Image.open("image_temp.png")
+            #pil_mask_image = Image.open("mask_temp.png")
             #outpainting_image, outpainting_mask, new_width, new_height = await self.get_outpainting_images(int(self.outpainting_pixels),
             #                                                                                               self.outpainting_direction,
             #                                                                                               pil_image,
@@ -209,7 +229,7 @@ class FluxFillRequest:
             kwargs["mask_image"] = str(mask_image)
 
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
@@ -268,7 +288,7 @@ class FluxFillRequest:
             elif outpainting_direction == "→":
                 paste_position = (0, 0)
 
-        if outpainting_direction in ("O"):
+        if outpainting_direction in "O":
             new_width = width + (outpainting_pixels * 2)
             new_height = height + (outpainting_pixels * 2)
             paste_position = (outpainting_pixels, outpainting_pixels)

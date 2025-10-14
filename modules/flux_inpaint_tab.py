@@ -1,23 +1,32 @@
 import asyncio
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget, QSizePolicy
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                                QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider, ClickablePixmap,
-                                ModelPickerWidget)
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ModelPickerWidget, PainterWidget,
+                                ParagraphInputBox, QueueObjectWidget, QueueViewer, SingleLineInputBox,
+                                VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class FluxInpaintTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
-        self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.tabs: VerticalTabWidget = tabs
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.widget(0))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.widget(1))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#008eab"
 
         self.paint_area = PainterWidget()
 
@@ -35,11 +44,7 @@ class FluxInpaintTab(QWidget):
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
@@ -114,7 +119,7 @@ class FluxInpaintTab(QWidget):
                                          mask_image=self.paint_area.original_mask,
                                          strength=strength,
                                          model_name=model_name)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#2F2452")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -131,8 +136,23 @@ class FluxInpaintTab(QWidget):
         self.lora_list.insertItems(0, loras)
 
 class FluxInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, steps, batch_size, guidance_scale, seed,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, model_name):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 steps: str,
+                 batch_size: str,
+                 guidance_scale: str,
+                 seed: str,
+                 enhance_prompt: bool,
+                 width: str,
+                 height: str,
+                 image: QPixmap,
+                 mask_image: QPixmap,
+                 strength: float,
+                 lora_name: list,
+                 model_name: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
@@ -150,6 +170,7 @@ class FluxInpaintRequest:
         self.width = width
         self.height = height
         self.strength = strength
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):

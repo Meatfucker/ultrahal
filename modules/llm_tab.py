@@ -1,17 +1,22 @@
 import time
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QSizePolicy
-from PySide6.QtCore import QTimer
+from typing import cast
+
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton
 from qasync import asyncSlot
-from modules.ui_widgets import SingleLineInputBox, ModelPickerWidget, LLMHistoryWidget
+
+from modules.avernus_client import AvernusClient
+from modules.queue import QueueTab
+from modules.ui_widgets import LLMHistoryWidget, ModelPickerWidget, QueueObjectWidget, QueueViewer, VerticalTabWidget
 
 
 class LlmTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
-        self.avernus_client = avernus_client
-        self.tabs = tabs
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.avernus_client: AvernusClient = avernus_client
+        self.tabs: VerticalTabWidget = tabs
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#4c493d"
 
         self.text_input = QTextEdit(acceptRichText=False)
         self.history_viewer = LLMHistoryWidget(self)
@@ -20,11 +25,7 @@ class LlmTab(QWidget):
         self.clear_history_button.clicked.connect(self.clear_history)
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
 
         main_layout = QHBoxLayout()
         chat_layout = QVBoxLayout()
@@ -39,29 +40,30 @@ class LlmTab(QWidget):
         config_layout.addWidget(self.submit_button)
 
         self.setLayout(main_layout)
+        self.setStyleSheet("""QTextEdit {border: none; background-color: #25252a; color: #ddd; font-size: 14px;}
+                           LLMHistoryWidget {background-color: #25252a; color: #ddd; font-size: 14px;}""")
 
     def clear_history(self):
         self.history_viewer.clear_history()
 
     @asyncSlot()
     async def on_submit(self):
-        #self.submit_button.setDisabled(True)
+        self.queue_color: str = "#4c493d"
         input_text = self.text_input.toPlainText()
         model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRequest(self.avernus_client, self, input_text, model_name)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#3F1507")
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
 
     @asyncSlot()
     async def on_reroll(self, input_text, history):
-        self.submit_button.setDisabled(True)
+        self.queue_color: str = "#666152"
         model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRerollRequest(self.avernus_client, self, input_text, model_name, history)
-
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#5F3527")
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
@@ -72,12 +74,17 @@ class LlmTab(QWidget):
 
 
 class LLMRequest:
-    def __init__(self, avernus_client, tab, input_text, model_name):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 tab: LlmTab,
+                 input_text: str,
+                 model_name: str):
         self.avernus_client = avernus_client
         self.tab = tab
         self.prompt = input_text
         self.model_name = model_name
         self.queue_info = None
+        self.ui_item: QueueObjectWidget | None = None
 
     async def run(self):
         start_time = time.time()
@@ -99,14 +106,19 @@ class LLMRequest:
             gen_history = self.tab.history_viewer.get_history()
             response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
         if isinstance(response, str):
-            await self.tab.add_history("user", self.prompt, "#002200")
-            await self.tab.add_history("assistant", response, "#000022")
+            await self.tab.add_history("user", self.prompt, "#303040")
+            await self.tab.add_history("assistant", response, "#303050")
             self.tab.text_input.clear()
             self.tab.submit_button.setDisabled(False)
 
 
 class LLMRerollRequest(LLMRequest):
-    def __init__(self, avernus_client, tab, input_text, model_name, history):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 tab: LlmTab,
+                 input_text: str,
+                 model_name: str,
+                 history: list):
         super().__init__(avernus_client, tab, input_text, model_name)
         self.history = history
 

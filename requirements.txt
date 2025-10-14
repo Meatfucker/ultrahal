@@ -1,3 +1,5 @@
+opencv-python
+pydub
 requests~=2.32.3
 httpx~=0.28.1
 loguru~=0.7.3

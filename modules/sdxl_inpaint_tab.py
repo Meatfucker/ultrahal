@@ -1,24 +1,33 @@
 import asyncio
 import time
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget, QListWidget,
-                                QComboBox, QSizePolicy)
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QComboBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+                                QVBoxLayout, QWidget)
 from qasync import asyncSlot
+
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import (PainterWidget, ParagraphInputBox, SingleLineInputBox, HorizontalSlider,
-                                ModelPickerWidget, ClickablePixmap)
+from modules.gallery import GalleryTab
+from modules.queue import QueueTab
+from modules.ui_widgets import (ClickablePixmap, ImageGallery, HorizontalSlider, ModelPickerWidget, PainterWidget,
+                                ParagraphInputBox, QueueObjectWidget, QueueViewer, SingleLineInputBox,
+                                VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
+
 class SdxlInpaintTab(QWidget):
-    def __init__(self, avernus_client, tabs):
+    def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
-        self.tabs = tabs
+        self.tabs: VerticalTabWidget = tabs
         self.gallery_tab = self.tabs.widget(0)
-        self.gallery = self.gallery_tab.gallery
-        self.queue_tab = self.tabs.widget(1)
-        self.queue_view = self.queue_tab.queue_view
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
+        self.gallery: ImageGallery = self.gallery_tab.gallery
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
+        self.queue_view: QueueViewer = self.queue_tab.queue_view
+        self.queue_color: str = "#6b1a93"
 
         self.paint_area = PainterWidget()
 
@@ -37,11 +46,7 @@ class SdxlInpaintTab(QWidget):
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.submit_button.setStyleSheet("""
-                    QPushButton {
-                        font-size: 20px;
-                    }
-                """)
+        self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()
@@ -124,7 +129,7 @@ class SdxlInpaintTab(QWidget):
                                          model_name=model_name,
                                          scheduler=scheduler,
                                          seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#334E74")
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -149,12 +154,30 @@ class SdxlInpaintTab(QWidget):
 
 
 class SDXLInpaintRequest:
-    def __init__(self, avernus_client, gallery, tabs, prompt, negative_prompt, steps, batch_size, guidance_scale,
-                 enhance_prompt, width, height, image, mask_image, strength, lora_name, model_name, scheduler, seed):
+    def __init__(self,
+                 avernus_client: AvernusClient,
+                 gallery: ImageGallery,
+                 tabs: VerticalTabWidget,
+                 prompt: str,
+                 negative_prompt: str,
+                 steps: str,
+                 batch_size: str,
+                 guidance_scale: str,
+                 enhance_prompt: bool,
+                 width: str,
+                 height: str,
+                 image: QPixmap,
+                 mask_image: QPixmap,
+                 strength: float,
+                 lora_name: list,
+                 model_name: str,
+                 scheduler: str,
+                 seed: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = None
         self.negative_prompt = negative_prompt
         self.steps = steps
         self.batch_size = batch_size
@@ -170,6 +193,7 @@ class SDXLInpaintRequest:
         self.height = height
         self.strength = strength
         self.seed = seed
+        self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt}"
 
     async def run(self):
@@ -207,7 +231,7 @@ class SDXLInpaintRequest:
         kwargs["model_name"] = str(self.model_name)
         kwargs["scheduler"] = str(self.scheduler)
 
-        if self.enhance_prompt is True:
+        if self.enhance_prompt:
             self.enhanced_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             try:
