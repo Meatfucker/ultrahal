@@ -195,7 +195,7 @@ class ClickableAudio(QGraphicsProxyWidget):
     def copy_mp3_to_clipboard(self):
         try:
             # Create a temporary MP3 file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_mp3:
+            with tempfile.NamedTemporaryFile(delete=True, suffix=".mp3") as tmp_mp3:
                 mp3_path = tmp_mp3.name
 
             # Convert WAV to MP3

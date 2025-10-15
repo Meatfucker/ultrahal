@@ -155,7 +155,7 @@ class ACERequest:
         QApplication.processEvents()
 
     def load_audio_from_bytes(self, audio_bytes):
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as f:
             f.write(audio_bytes)
             f.flush()
             return ClickableAudio(f.name, self.prompt, self.lyrics)
