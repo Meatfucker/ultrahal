@@ -31,6 +31,17 @@ class ACETab(QWidget):
         self.prompt_input = SingleLineInputBox("Prompt")
         self.lyrics_label = QLabel("Lyrics")
         self.lyrics_input = QTextEdit(acceptRichText=False)
+        self.lyrics_input.setStyleSheet("""
+             QTextEdit {
+                 border: none;
+                 background-color: #2c2c31;
+                 color: #ddd;
+                 font-size: 14px;
+                 border: 2px solid solid;
+                 border-color: #28282f;
+                 border-radius: 8px; /* rounded corners */
+             }
+         """)
         self.length_input = SingleLineInputBox("Seconds", placeholder_text="60")
         self.steps_input = SingleLineInputBox("Steps", placeholder_text="27")
         self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="15.0")

@@ -703,9 +703,12 @@ class LLMHistoryWidget(QScrollArea):
         )
         self.setStyleSheet("""
                  border: none;
-                 background-color: #25252a;
+                 background-color: #2c2c31;
                  color: #ddd;
                  font-size: 14px;
+                 border: 2px solid solid;
+                 border-color: #28282f;
+                 border-radius: 8px; /* rounded corners */
                  """)
 
     def add_message(self, role, message, hex_color):
@@ -1159,9 +1162,12 @@ class ParagraphInputBox(QVBoxLayout):
         self.input.setStyleSheet("""
              QTextEdit {
                  border: none;
-                 background-color: #25252a;
+                 background-color: #2c2c31;
                  color: #ddd;
                  font-size: 14px;
+                 border: 2px solid solid;
+                 border-color: #28282f;
+                 border-radius: 8px; /* rounded corners */
              }
          """)
 
@@ -1378,13 +1384,29 @@ class VerticalTabWidget(QWidget):
         self.setLayout(layout)
         self.setStyleSheet("""
             QListWidget {
-                border: none;
-                background-color: #25252a;
+                background-color: #2c2c31;
                 color: #ddd;
                 font-size: 14px;
+                border-right: 1px solid #444; /* Optional: separates list from content */
             }
+
+            QListWidget::item {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 8px; /* rounded corners */
+                padding: 0px 0px;
+                margin: 1px;
+            }
+
+            QListWidget::item:hover {
+                background-color: #3a3a3f;
+                border: 1px solid #555;
+            }
+
             QListWidget::item:selected {
                 background-color: #444;
+                border: 1px solid #666;
+                border-radius: 8px;
                 color: white;
             }
         """)

@@ -48,6 +48,17 @@ class FluxInpaintTab(QWidget):
         self.prompt_label = ParagraphInputBox("Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
+        self.lora_list.setStyleSheet("""
+             QListWidget {
+                 border: none;
+                 background-color: #2c2c31;
+                 color: #ddd;
+                 font-size: 14px;
+                 border: 2px solid solid;
+                 border-color: #28282f;
+                 border-radius: 8px; /* rounded corners */
+             }
+         """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")

@@ -40,8 +40,18 @@ class LlmTab(QWidget):
         config_layout.addWidget(self.submit_button)
 
         self.setLayout(main_layout)
-        self.setStyleSheet("""QTextEdit {border: none; background-color: #25252a; color: #ddd; font-size: 14px;}
-                           LLMHistoryWidget {background-color: #25252a; color: #ddd; font-size: 14px;}""")
+        self.setStyleSheet("""QTextEdit {border: 2px solid solid; 
+                                         border-color: #28282f;
+                                         background-color: #2c2c31; 
+                                         color: #ddd; 
+                                         font-size: 14px;
+                                         border-radius: 8px; /* rounded corners */}
+                           LLMHistoryWidget {border: 2px solid solid;
+                                             border-color: #28282f;
+                                             background-color: #2c2c31; 
+                                             color: #ddd;
+                                             font-size: 14px;
+                                             border-radius: 8px; /* rounded corners */}""")
 
     def clear_history(self):
         self.history_viewer.clear_history()

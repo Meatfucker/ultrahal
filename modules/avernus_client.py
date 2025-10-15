@@ -532,6 +532,22 @@ class AvernusClient:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
+    async def realesrgan(self, image, scale=None):
+        """This takes an image and an optional scale of either 2, 4, or 8 and returns an upscaled image"""
+        url = f"http://{self.base_url}/realesrgan_generate"
+        data = {"image": image,
+                "scale": scale}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json().get("images")
+            else:
+                print(f"REALESRGAN ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {"ERROR": str(e)}
+
     async def sdxl_image(self, prompt, image=None, negative_prompt=None, model_name=None, lora_name=None, width=None,
                          height=None, steps=None, batch_size=None, guidance_scale=None, strength=None,
                          controlnet_image=None, controlnet_processor=None, controlnet_conditioning=None,
@@ -593,6 +609,21 @@ class AvernusClient:
                 return response.json().get("images", [])
             else:
                 print(f"SDXL INPAINT ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def swin2sr(self, image):
+        """This takes an image and returns an upscaled image"""
+        url = f"http://{self.base_url}/swin2sr_generate"
+        data = {"image": image}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json().get("images")
+            else:
+                print(f"SWIN2SR ERROR: {response.status_code}")
         except Exception as e:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}

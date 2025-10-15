@@ -39,6 +39,17 @@ class FluxTab(QWidget):
         self.model_picker = ModelPickerWidget("flux-dev")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
+        self.lora_list.setStyleSheet("""
+             QListWidget {
+                 border: none;
+                 background-color: #2c2c31;
+                 color: #ddd;
+                 font-size: 14px;
+                 border: 2px solid solid;
+                 border-color: #28282f;
+                 border-radius: 8px; /* rounded corners */
+             }
+         """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.resolution_widget = ResolutionInput()
