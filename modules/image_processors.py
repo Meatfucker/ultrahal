@@ -2,6 +2,7 @@ import asyncio
 import time
 from typing import cast
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
@@ -37,11 +38,12 @@ class ImageProcessorTab(QWidget):
         self.setLayout(self.main_layout)
         selector_layout = QVBoxLayout()
         self.config_widget = RealESRGANConfig(self.avernus_client, self.tabs, self.input_image)
+        self.config_widget.main_layout.setAlignment(Qt.AlignBottom)
 
         selector_layout.addWidget(self.processor_selector)
         selector_layout.addLayout(self.input_image)
 
-        self.main_layout.addLayout(selector_layout)
+        self.main_layout.addLayout(selector_layout, stretch=10)
         self.main_layout.addWidget(self.config_widget)
 
     def change_processor(self):
@@ -55,6 +57,7 @@ class ImageProcessorTab(QWidget):
         else:
             pass
         self.main_layout.addWidget(self.config_widget)
+        self.config_widget.main_layout.setAlignment(Qt.AlignBottom)
 
 
 class RealESRGANConfig(QWidget):

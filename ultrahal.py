@@ -15,6 +15,7 @@ from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
 from modules.llm_tab import LlmTab
 from modules.gallery import GalleryTab
+from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
 from modules.sdxl_tab import SdxlTab
 from modules.sdxl_inpaint_tab import SdxlInpaintTab
@@ -63,6 +64,7 @@ class MainWindow(QWidget):
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
+        self.hunyuan_video_tab = HunyuanVideoTab(self.avernus_client, self.tabs)
         self.image_processor_tab = ImageProcessorTab(self.avernus_client, self.tabs)
         self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
@@ -78,8 +80,9 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
-        self.tabs.addTab(self.image_processor_tab, "Processors")
+        self.tabs.addTab(self.hunyuan_video_tab, "Hunyuan Video")
         self.tabs.addTab(self.llm_chat_tab, "LLM")
+        self.tabs.addTab(self.image_processor_tab, "Processors")
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
         self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit+")
