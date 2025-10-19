@@ -224,18 +224,6 @@ class ClickablePixmap(QGraphicsPixmapItem):
     def __init__(self, original_pixmap: QPixmap, gallery, tabs):
         super().__init__(original_pixmap)
         self.tabs = tabs
-        self.queue_tab = self.tabs.named_widget("Queue")
-        self.sdxl_tab = self.tabs.named_widget("SDXL")
-        self.sdxl_inpaint_tab = self.tabs.named_widget("SDXL Inpaint")
-        self.flux_tab = self.tabs.named_widget("Flux")
-        self.flux_inpaint_tab = self.tabs.named_widget("Flux Inpaint")
-        self.flux_fill_tab = self.tabs.named_widget("Flux Fill")
-        self.qwen_image_tab = self.tabs.named_widget("Qwen")
-        self.qwen_image_inpaint_tab = self.tabs.named_widget("Qwen Inpaint")
-        self.qwen_image_edit_tab = self.tabs.named_widget("Qwen Edit+")
-        self.wan_tab = self.tabs.named_widget("Wan")
-        self.wan_vace_tab = self.tabs.named_widget("Wan VACE")
-        self.queue_view = self.queue_tab.queue_view
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.original_pixmap = original_pixmap
@@ -270,97 +258,8 @@ class ClickablePixmap(QGraphicsPixmapItem):
                 self.gallery.centerOn(0, 0)
 
         elif event.button() == Qt.RightButton:
-            self.show_context_menu(event.screenPos())
+            show_context_menu(self.tabs, self.original_pixmap)
 
-    def show_context_menu(self, global_pos):
-        menu = QMenu()
-        save_action = menu.addAction("Save Image As...")
-        copy_action = menu.addAction("Copy Image")
-
-        sdxl_menu = menu.addMenu("SDXL")
-        flux_menu = menu.addMenu("Flux")
-        qwen_menu = menu.addMenu("Qwen")
-        wan_menu = menu.addMenu("Wan")
-
-        sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
-        sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
-        sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
-        sdxl_send_to_inpaint = sdxl_menu.addAction("Send to SDXL Inpaint")
-        flux_send_to_i2i = flux_menu.addAction("Send to I2I")
-        flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
-        flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
-        flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
-        flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
-        qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
-        qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
-        qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")
-        qwen_image_edit_send_to_1 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 1")
-        qwen_image_edit_send_to_2 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 2")
-        qwen_image_edit_send_to_3 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 3")
-        wan_send_to_i2v = wan_menu.addAction("Send to Wan I2V")
-        wan_vace_send_to_first_frame = wan_menu.addAction("Send to WAN VACE First Frame")
-        wan_vace_send_to_last_frame = wan_menu.addAction("Send to WAN VACE Last Frame")
-
-
-        action = menu.exec(global_pos)
-        if action == save_action:
-            self.save_image_dialog()
-        if action == copy_action:
-            clipboard = QApplication.clipboard()
-            clipboard.setPixmap(self.original_pixmap)
-
-        if action == sdxl_send_to_i2i:
-            self.sdxl_tab.i2i_image_label.load_pixmap(self.original_pixmap)
-        if action == sdxl_send_to_ipadapter:
-            self.sdxl_tab.ipadapter_image_label.load_pixmap(self.original_pixmap)
-        if action == sdxl_sent_to_controlnet:
-            self.sdxl_tab.controlnet_image_label.load_pixmap(self.original_pixmap)
-
-        if action == sdxl_send_to_inpaint:
-            self.sdxl_inpaint_tab.paint_area.set_image(self.original_pixmap)
-
-        if action == flux_send_to_i2i:
-            self.flux_tab.i2i_image_label.load_pixmap(self.original_pixmap)
-        if action == flux_send_to_ipadapter:
-            self.flux_tab.ipadapter_image_label.load_pixmap(self.original_pixmap)
-        if action == flux_sent_to_kontext:
-            self.flux_tab.kontext_image_label.load_pixmap(self.original_pixmap)
-
-        if action == flux_send_to_inpaint:
-            self.flux_inpaint_tab.paint_area.set_image(self.original_pixmap)
-        if action == flux_send_to_fill:
-            self.flux_fill_tab.paint_area.set_image(self.original_pixmap)
-
-        if action == qwen_image_send_to_i2i:
-            self.qwen_image_tab.i2i_image_label.load_pixmap(self.original_pixmap)
-        if action == qwen_image_send_to_edit:
-            self.qwen_image_tab.edit_image_label.load_pixmap(self.original_pixmap)
-        if action == qwen_image_send_to_inpaint:
-            self.qwen_image_inpaint_tab.paint_area.set_image(self.original_pixmap)
-        if action == qwen_image_edit_send_to_1:
-            self.qwen_image_edit_tab.edit_image_1_label.load_pixmap(self.original_pixmap)
-        if action == qwen_image_edit_send_to_2:
-            self.qwen_image_edit_tab.edit_image_2_label.load_pixmap(self.original_pixmap)
-        if action == qwen_image_edit_send_to_3:
-            self.qwen_image_edit_tab.edit_image_3_label.load_pixmap(self.original_pixmap)
-
-        if action == wan_send_to_i2v:
-            self.wan_tab.i2v_image_label.load_pixmap(self.original_pixmap)
-        if action == wan_vace_send_to_first_frame:
-            self.wan_vace_tab.first_frame_label.load_pixmap(self.original_pixmap)
-        if action == wan_vace_send_to_last_frame:
-            self.wan_vace_tab.last_frame_label.load_pixmap(self.original_pixmap)
-
-
-    def save_image_dialog(self):
-        file_path, _ = QFileDialog.getSaveFileName(
-            None,
-            "Save Image",
-            "image.png",
-            "Images (*.png *.jpg *.bmp)"
-        )
-        if file_path:
-            self.original_pixmap.save(file_path)
 
 class ClickableVideo(QGraphicsWidget):
     def __init__(self, video_path: str, prompt: str, parent=None):
@@ -642,7 +541,7 @@ class ImageInputBox(QHBoxLayout):
         self.paste_image_button.clicked.connect(self.paste_image)
         self.load_image_button = QPushButton("Load")
         self.load_image_button.clicked.connect(self.load_image)
-        self.image_view = ScalingImageView()
+        self.image_view = ScalingImageView(self.source_widget.tabs)
         self.input_image = QPixmap("assets/chili.png")
         self.image_layout = QVBoxLayout()
         self.enable_layout = QHBoxLayout()
@@ -1304,13 +1203,18 @@ class ResolutionInput(QWidget):
 
 
 class ScalingImageView(QGraphicsView):
-    def __init__(self):
+    def __init__(self, tabs):
         super().__init__()
+        self.tabs = tabs
         self.gallery = QGraphicsScene()
         self.setScene(self.gallery)
         self.original_image = None
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            show_context_menu(self.tabs, self.original_image)
 
     def add_pixmap(self, pixmap):
         self.gallery.clear()
@@ -1545,3 +1449,103 @@ class WordWrapLabel(QLabel):
     def resizeEvent(self, event):
         self.setMaximumWidth(self.parent().width() if self.parent() else self.width())
         super().resizeEvent(event)
+
+def show_context_menu(tabs, pixmap):
+    sdxl_tab = tabs.named_widget("SDXL")
+    sdxl_inpaint_tab = tabs.named_widget("SDXL Inpaint")
+    flux_tab = tabs.named_widget("Flux")
+    flux_inpaint_tab = tabs.named_widget("Flux Inpaint")
+    flux_fill_tab = tabs.named_widget("Flux Fill")
+    qwen_image_tab = tabs.named_widget("Qwen")
+    qwen_image_inpaint_tab = tabs.named_widget("Qwen Inpaint")
+    qwen_image_edit_tab = tabs.named_widget("Qwen Edit+")
+    wan_tab = tabs.named_widget("Wan")
+    wan_vace_tab = tabs.named_widget("Wan VACE")
+    menu = QMenu()
+    save_action = menu.addAction("Save Image As...")
+    copy_action = menu.addAction("Copy Image")
+
+    sdxl_menu = menu.addMenu("SDXL")
+    flux_menu = menu.addMenu("Flux")
+    qwen_menu = menu.addMenu("Qwen")
+    wan_menu = menu.addMenu("Wan")
+
+    sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
+    sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
+    sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to Controlnet")
+    sdxl_send_to_inpaint = sdxl_menu.addAction("Send to SDXL Inpaint")
+    flux_send_to_i2i = flux_menu.addAction("Send to I2I")
+    flux_send_to_ipadapter = flux_menu.addAction("Send to IP Adapter")
+    flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
+    flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
+    flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
+    qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
+    qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
+    qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")
+    qwen_image_edit_send_to_1 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 1")
+    qwen_image_edit_send_to_2 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 2")
+    qwen_image_edit_send_to_3 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 3")
+    wan_send_to_i2v = wan_menu.addAction("Send to Wan I2V")
+    wan_vace_send_to_first_frame = wan_menu.addAction("Send to WAN VACE First Frame")
+    wan_vace_send_to_last_frame = wan_menu.addAction("Send to WAN VACE Last Frame")
+
+
+    action = menu.exec(QCursor.pos())
+    if action == save_action:
+        save_image_dialog(pixmap)
+    if action == copy_action:
+        clipboard = QApplication.clipboard()
+        clipboard.setPixmap(pixmap)
+
+    if action == sdxl_send_to_i2i:
+        sdxl_tab.i2i_image_label.load_pixmap(pixmap)
+    if action == sdxl_send_to_ipadapter:
+        sdxl_tab.ipadapter_image_label.load_pixmap(pixmap)
+    if action == sdxl_sent_to_controlnet:
+        sdxl_tab.controlnet_image_label.load_pixmap(pixmap)
+
+    if action == sdxl_send_to_inpaint:
+        sdxl_inpaint_tab.paint_area.set_image(pixmap)
+
+    if action == flux_send_to_i2i:
+        flux_tab.i2i_image_label.load_pixmap(pixmap)
+    if action == flux_send_to_ipadapter:
+        flux_tab.ipadapter_image_label.load_pixmap(pixmap)
+    if action == flux_sent_to_kontext:
+        flux_tab.kontext_image_label.load_pixmap(pixmap)
+
+    if action == flux_send_to_inpaint:
+        flux_inpaint_tab.paint_area.set_image(pixmap)
+    if action == flux_send_to_fill:
+        flux_fill_tab.paint_area.set_image(pixmap)
+
+    if action == qwen_image_send_to_i2i:
+        qwen_image_tab.i2i_image_label.load_pixmap(pixmap)
+    if action == qwen_image_send_to_edit:
+        qwen_image_tab.edit_image_label.load_pixmap(pixmap)
+    if action == qwen_image_send_to_inpaint:
+        qwen_image_inpaint_tab.paint_area.set_image(pixmap)
+    if action == qwen_image_edit_send_to_1:
+        qwen_image_edit_tab.edit_image_1_label.load_pixmap(pixmap)
+    if action == qwen_image_edit_send_to_2:
+        qwen_image_edit_tab.edit_image_2_label.load_pixmap(pixmap)
+    if action == qwen_image_edit_send_to_3:
+        qwen_image_edit_tab.edit_image_3_label.load_pixmap(pixmap)
+
+    if action == wan_send_to_i2v:
+        wan_tab.i2v_image_label.load_pixmap(pixmap)
+    if action == wan_vace_send_to_first_frame:
+        wan_vace_tab.first_frame_label.load_pixmap(pixmap)
+    if action == wan_vace_send_to_last_frame:
+        wan_vace_tab.last_frame_label.load_pixmap(pixmap)
+
+
+def save_image_dialog(pixmap):
+    file_path, _ = QFileDialog.getSaveFileName(
+        None,
+        "Save Image",
+        "image.png",
+        "Images (*.png *.jpg *.bmp)"
+    )
+    if file_path:
+        pixmap.save(file_path)
