@@ -10,6 +10,7 @@ from qasync import QEventLoop, asyncSlot
 from modules.ui_widgets import CircleWidget, VerticalTabWidget
 from modules.ace_tab import ACETab
 from modules.avernus_client import AvernusClient
+from modules.chroma_tab import ChromaTab
 from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
@@ -61,6 +62,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.queue_tab, "Queue")
 
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
+        self.chroma_tab = ChromaTab(self.avernus_client, self.tabs)
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
@@ -77,6 +79,7 @@ class MainWindow(QWidget):
 
 
         self.tabs.addTab(self.ace_tab, "ACE")
+        self.tabs.addTab(self.chroma_tab, "Chroma")
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
@@ -153,6 +156,7 @@ class MainWindow(QWidget):
         await self.qwen_tab.make_lora_list()
         await self.qwen_edit_tab.make_lora_list()
         await self.qwen_inpaint_tab.make_lora_list()
+        await self.chroma_tab.make_lora_list()
 
 
     def closeEvent(self, event):

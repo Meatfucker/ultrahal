@@ -4,7 +4,7 @@ from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
@@ -39,6 +39,7 @@ class WanTab(QWidget):
         self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="5.0")
         self.flow_shift_input = SingleLineInputBox("Flow Shift", placeholder_text="3.0")
         self.seed_input = SingleLineInputBox("Seed", placeholder_text="42")
+        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
@@ -62,6 +63,7 @@ class WanTab(QWidget):
         input_layout.addLayout(self.guidance_scale_input)
         input_layout.addLayout(self.flow_shift_input)
         input_layout.addLayout(self.seed_input)
+        input_layout.addWidget(self.prompt_enhance_checkbox)
         input_layout.addStretch()
         input_layout.addWidget(self.submit_button)
 
@@ -87,6 +89,7 @@ class WanTab(QWidget):
         seed = self.seed_input.input.text()
         i2v_image_enable = self.i2v_image_label.enable_checkbox.isChecked()
         v2v_enable = self.v2v_video_label.enable_checkbox.isChecked()
+        enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         if v2v_enable is not True:
             if i2v_image_enable is True:
                 i2v_image = self.i2v_image_label.input_image
@@ -109,7 +112,8 @@ class WanTab(QWidget):
                                  seed=seed,
                                  i2v_image_enabled=i2v_image_enable,
                                  i2v_image=i2v_image,
-                                 model_name=model_name
+                                 model_name=model_name,
+                                 enhance_prompt=enhance_prompt,
                                  )
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
         else:
@@ -125,7 +129,8 @@ class WanTab(QWidget):
                                     flow_shift=flow_shift,
                                     seed=seed,
                                     video=self.v2v_video_label.file_path,
-                                    model_name=model_name_v2v)
+                                    model_name=model_name_v2v,
+                                    enhance_prompt=enhance_prompt,)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
 
         request.ui_item = queue_item
@@ -164,11 +169,13 @@ class WanRequest:
                  i2v_image_enabled: bool,
                  i2v_image: QPixmap,
                  model_name: str,
-                 flow_shift: str):
+                 flow_shift: str,
+                 enhance_prompt: bool,):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.frames = frames
         self.width = width
@@ -179,6 +186,7 @@ class WanRequest:
         self.i2v_image_enabled = i2v_image_enabled
         self.i2v_image = i2v_image
         self.model_name = model_name
+        self.enhance_prompt = enhance_prompt
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"I2I:{self.i2v_image_enabled}"
 
@@ -195,7 +203,6 @@ class WanRequest:
     async def generate(self):
         print(f"WAN: {self.prompt}, {self.frames}")
         kwargs = {}
-        kwargs["prompt"] = self.prompt
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
         if self.frames != "": kwargs["num_frames"] = int(self.frames)
         if self.width != "": kwargs["width"] = float(self.width)
@@ -204,6 +211,12 @@ class WanRequest:
         if self.flow_shift != "": kwargs["flow_shift"] = float(self.flow_shift)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
+        if self.enhance_prompt:
+            llm_prompt = await self.avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            self.enhanced_prompt = llm_prompt
+        kwargs["prompt"] = self.enhanced_prompt
+
         if self.i2v_image_enabled:
             self.i2v_image.save("temp.png", quality=100)
             if self.width == "":
@@ -246,11 +259,13 @@ class WanV2VRequest:
                  seed: str,
                  video,
                  model_name: str,
+                 enhance_prompt: bool,
                  flow_shift: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.width = width
         self.height = height
@@ -259,6 +274,7 @@ class WanV2VRequest:
         self.seed = seed
         self.video = video
         self.model_name = model_name
+        self.enhance_prompt = enhance_prompt
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.prompt}, {self.width}x{self.height}, {self.model_name}"
 
@@ -275,7 +291,6 @@ class WanV2VRequest:
     async def generate(self):
         print(f"WAN: {self.prompt}")
         kwargs = {}
-        kwargs["prompt"] = self.prompt
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
         if self.width != "": kwargs["width"] = float(self.width)
         if self.height != "": kwargs["height"] = float(self.height)
@@ -283,6 +298,11 @@ class WanV2VRequest:
         if self.flow_shift != "": kwargs["flow_shift"] = float(self.flow_shift)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
+        if self.enhance_prompt:
+            llm_prompt = await self.avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            self.enhanced_prompt = llm_prompt
+        kwargs["prompt"] = self.enhanced_prompt
         kwargs["video_path"] = self.video
         response = await self.avernus_client.wan_v2v(**kwargs)
         await self.display_video(response)

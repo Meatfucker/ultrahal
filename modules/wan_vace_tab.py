@@ -4,7 +4,7 @@ from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QSizePolicy
+from PySide6.QtWidgets import QCheckBox, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QSizePolicy
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
@@ -36,6 +36,7 @@ class WanVACETab(QWidget):
         self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="5.0")
         self.flow_shift_input = SingleLineInputBox("Flow Shift", placeholder_text="3.0")
         self.seed_input = SingleLineInputBox("Seed", placeholder_text="42")
+        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
@@ -64,6 +65,7 @@ class WanVACETab(QWidget):
         config_layout.addLayout(self.guidance_scale_input)
         config_layout.addLayout(self.flow_shift_input)
         config_layout.addLayout(self.seed_input)
+        config_layout.addWidget(self.prompt_enhance_checkbox)
         config_layout.addStretch()
         config_layout.addWidget(self.submit_button)
 
@@ -85,6 +87,7 @@ class WanVACETab(QWidget):
         seed = self.seed_input.input.text()
         first_frame_enabled = self.first_frame_label.enable_checkbox.isChecked()
         last_frame_enabled = self.last_frame_label.enable_checkbox.isChecked()
+        enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         if first_frame_enabled is True:
             first_frame = self.first_frame_label.input_image
         else:
@@ -109,6 +112,7 @@ class WanVACETab(QWidget):
                                  last_frame_enabled=last_frame_enabled,
                                  last_frame=last_frame,
                                  flow_shift=flow_shift,
+                                 enhance_prompt=enhance_prompt,
                                  model_name=model_name
                                  )
 
@@ -135,11 +139,13 @@ class WanVACERequest:
                  last_frame_enabled: bool,
                  last_frame: QPixmap,
                  flow_shift: str,
+                 enhance_prompt: bool,
                  model_name: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.frames = frames
         self.width = width
@@ -151,6 +157,7 @@ class WanVACERequest:
         self.first_frame = first_frame
         self.last_frame_enabled = last_frame_enabled
         self.last_frame = last_frame
+        self.enhance_prompt = enhance_prompt
         self.model_name = model_name
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"VACE: FF:{self.first_frame_enabled}, LF:{self.last_frame_enabled}"
@@ -168,7 +175,6 @@ class WanVACERequest:
     async def generate(self):
         print(f"WAN VACE: {self.prompt}, {self.frames}")
         kwargs = {}
-        kwargs["prompt"] = self.prompt
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
         if self.frames != "": kwargs["num_frames"] = int(self.frames)
         if self.width != "":
@@ -182,6 +188,12 @@ class WanVACERequest:
         if self.flow_shift != "": kwargs["flow_shift"] = float(self.flow_shift)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
+        if self.enhance_prompt:
+            llm_prompt = await self.avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            self.enhanced_prompt = llm_prompt
+        kwargs["prompt"] = self.enhanced_prompt
+
         if self.first_frame_enabled:
             self.first_frame.save("temp.png", quality=100)
             image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])

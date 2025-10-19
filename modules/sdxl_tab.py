@@ -1,6 +1,4 @@
 import asyncio
-import json
-import random
 import time
 from typing import cast
 
@@ -16,7 +14,7 @@ from modules.queue import QueueTab
 from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget,
                                 ParagraphInputBox, QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox,
                                 VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags
+from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
 
 
 class SdxlTab(QWidget):
@@ -339,7 +337,7 @@ class SDXLRequest:
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
             self.enhanced_prompt = llm_prompt
         if self.add_artist:
-            random_artist_prompt = await self.get_random_artist_prompt()
+            random_artist_prompt = get_random_artist_prompt()
             self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
         if self.add_danbooru_tags:
             danbooru_tags = get_generic_danbooru_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
@@ -363,10 +361,3 @@ class SDXLRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
-
-    @asyncSlot()
-    async def get_random_artist_prompt(self):
-        with open('assets/artist.json', 'r') as file:
-            data = json.load(file)
-            selected_artist = random.choice(data)
-            return selected_artist.get('prompt')

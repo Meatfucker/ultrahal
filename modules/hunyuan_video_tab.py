@@ -3,7 +3,7 @@ import time
 from typing import cast
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
@@ -31,6 +31,7 @@ class HunyuanVideoTab(QWidget):
         self.resolution_input = ResolutionInput(placeholder_x="1280", placeholder_y="720")
         self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="6.0")
         self.seed_input = SingleLineInputBox("Seed", placeholder_text="42")
+        self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
         self.submit_button.setMinimumSize(100, 40)
@@ -49,6 +50,7 @@ class HunyuanVideoTab(QWidget):
         input_layout.addWidget(self.resolution_input)
         input_layout.addLayout(self.guidance_scale_input)
         input_layout.addLayout(self.seed_input)
+        input_layout.addWidget(self.prompt_enhance_checkbox)
         input_layout.addStretch()
         input_layout.addWidget(self.submit_button)
 
@@ -67,6 +69,7 @@ class HunyuanVideoTab(QWidget):
         height = self.resolution_input.height_label.input.text()
         guidance_scale = self.guidance_scale_input.input.text()
         seed = self.seed_input.input.text()
+        enhance_prompt = self.prompt_enhance_checkbox.isChecked()
 
         request = HunyuanVideoRequest(avernus_client=self.avernus_client,
                                       gallery=self.gallery,
@@ -78,6 +81,7 @@ class HunyuanVideoTab(QWidget):
                                       height=height,
                                       guidance_scale=guidance_scale,
                                       seed=seed,
+                                      enhance_prompt=enhance_prompt,
                                       model_name=model_name)
         queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
 
@@ -99,17 +103,20 @@ class HunyuanVideoRequest:
                  height: str,
                  guidance_scale: str,
                  seed: str,
+                 enhance_prompt: bool,
                  model_name: str):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.frames = frames
         self.width = width
         self.height = height
         self.guidance_scale = guidance_scale
         self.seed = seed
+        self.enhance_prompt = enhance_prompt
         self.model_name = model_name
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"Width:{self.width}, Height{self.height}"
@@ -126,8 +133,12 @@ class HunyuanVideoRequest:
     @asyncSlot()
     async def generate(self):
         print(f"HUNYUAN_VIDEO: {self.prompt}, {self.frames}")
+        if self.enhance_prompt:
+            llm_prompt = await self.avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            self.enhanced_prompt = llm_prompt
         kwargs = {}
-        kwargs["prompt"] = self.prompt
+        kwargs["prompt"] = self.enhanced_prompt
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
         if self.frames != "": kwargs["num_frames"] = int(self.frames)
         if self.width != "": kwargs["width"] = float(self.width)

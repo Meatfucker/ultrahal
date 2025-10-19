@@ -1,6 +1,7 @@
 import base64
 import csv
 import io
+import json
 import random
 from PIL import Image
 
@@ -70,3 +71,9 @@ def get_generic_danbooru_tags(csv_path, num_lines, category="0"):
     combined_string = " ".join(row[0] for row in selected_rows)
 
     return combined_string
+
+def get_random_artist_prompt():
+    with open('assets/artist.json', 'r') as file:
+        data = json.load(file)
+        selected_artist = random.choice(data)
+        return selected_artist.get('prompt')

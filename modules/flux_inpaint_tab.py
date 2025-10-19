@@ -14,7 +14,7 @@ from modules.queue import QueueTab
 from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ModelPickerWidget, PainterWidget,
                                 ParagraphInputBox, QueueObjectWidget, QueueViewer, SingleLineInputBox,
                                 VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64
+from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
 
 
 class FluxInpaintTab(QWidget):
@@ -60,6 +60,9 @@ class FluxInpaintTab(QWidget):
              }
          """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
+        self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
+        self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
+        self.danbooru_tags_slider = HorizontalSlider("Num Tags", 1, 20, 6, enable_ticks=False)
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.0")
@@ -84,6 +87,9 @@ class FluxInpaintTab(QWidget):
         self.config_layout.addLayout(self.config_widgets_layout)
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
+        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
@@ -109,6 +115,9 @@ class FluxInpaintTab(QWidget):
             for lora_list_item in lora_items:
                 lora_name.append(lora_list_item.text())
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
+        add_artist = self.add_random_artist_checkbox.isChecked()
+        add_danbooru_tags = self.add_random_danbooru_tags_checkbox.isChecked()
+        danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
         width = self.paint_area.original_image.width()
         height = self.paint_area.original_image.height()
         strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
@@ -124,6 +133,9 @@ class FluxInpaintTab(QWidget):
                                          seed=seed,
                                          lora_name=lora_name,
                                          enhance_prompt=enhance_prompt,
+                                         add_artist=add_artist,
+                                         add_danbooru_tags=add_danbooru_tags,
+                                         danbooru_tags_amount=danbooru_tags_amount,
                                          width=width,
                                          height=height,
                                          image=self.paint_area.original_image,
@@ -163,11 +175,15 @@ class FluxInpaintRequest:
                  mask_image: QPixmap,
                  strength: float,
                  lora_name: list,
-                 model_name: str):
+                 model_name: str,
+                 add_artist: bool,
+                 add_danbooru_tags: bool,
+                 danbooru_tags_amount: int):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.enhanced_prompt = prompt
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
@@ -181,6 +197,9 @@ class FluxInpaintRequest:
         self.width = width
         self.height = height
         self.strength = strength
+        self.add_artist = add_artist
+        self.add_danbooru_tags = add_danbooru_tags
+        self.danbooru_tags_amount = danbooru_tags_amount
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
 
@@ -216,24 +235,25 @@ class FluxInpaintRequest:
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
 
-        if self.enhance_prompt is True:
-            self.enhanced_prompt = await self.avernus_client.llm_chat(
+
+        if self.enhance_prompt:
+            llm_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-            try:
-                kwargs["model_name"] = str(self.model_name)
-                base64_images = await self.avernus_client.flux_inpaint_image(self.enhanced_prompt, **kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"FLUX INPAINT EXCEPTION: {e}")
-        else:
-            try:
-                kwargs["model_name"] = str(self.model_name)
-                base64_images = await self.avernus_client.flux_inpaint_image(self.prompt, **kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"FLUX INPAINT EXCEPTION: {e}")
+            self.enhanced_prompt = llm_prompt
+        if self.add_artist:
+            random_artist_prompt = get_random_artist_prompt()
+            self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
+        if self.add_danbooru_tags:
+            danbooru_tags = get_generic_danbooru_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
+            self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
+
+        try:
+            kwargs["model_name"] = str(self.model_name)
+            base64_images = await self.avernus_client.flux_inpaint_image(self.enhanced_prompt, **kwargs)
+            images = await base64_to_images(base64_images)
+            await self.display_images(images)
+        except Exception as e:
+            print(f"FLUX INPAINT EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):

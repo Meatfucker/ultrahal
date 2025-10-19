@@ -1,6 +1,4 @@
 import asyncio
-import json
-import random
 import time
 from typing import cast
 
@@ -13,9 +11,9 @@ from qasync import asyncSlot
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, ImageGallery, ImageInputBox, ParagraphInputBox, QueueObjectWidget,
-                                QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox,
+                                QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
+from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
 
 
 class QwenEditPlusTab(QWidget):
@@ -51,6 +49,8 @@ class QwenEditPlusTab(QWidget):
          """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
+        self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
+        self.danbooru_tags_slider = HorizontalSlider("Num Tags", 1, 20, 6, enable_ticks=False)
         self.enable_nunchaku_checkbox = QCheckBox("Enable Nunchaku")
         self.enable_nunchaku_checkbox.setChecked(True)
         self.resolution_widget = ResolutionInput()
@@ -75,6 +75,8 @@ class QwenEditPlusTab(QWidget):
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
+        self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
+        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
         self.config_widgets_layout.addWidget(self.enable_nunchaku_checkbox)
         self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
@@ -126,6 +128,8 @@ class QwenEditPlusTab(QWidget):
             images.append(edit_image_3)
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         add_artist = self.add_random_artist_checkbox.isChecked()
+        add_danbooru_tags = self.add_random_danbooru_tags_checkbox.isChecked()
+        danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
         nunchaku_enabled = self.enable_nunchaku_checkbox.isChecked()
 
         try:
@@ -144,6 +148,8 @@ class QwenEditPlusTab(QWidget):
                                           true_cfg_scale=true_cfg_scale,
                                           seed=seed,
                                           add_artist=add_artist,
+                                          add_danbooru_tags=add_danbooru_tags,
+                                          danbooru_tags_amount=danbooru_tags_amount,
                                           nunchaku_enabled=nunchaku_enabled)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
             request.ui_item = queue_item
@@ -176,12 +182,14 @@ class QwenEditPlusRequest:
                  seed: str,
                  enhance_prompt: bool,
                  add_artist: bool,
+                 add_danbooru_tags: bool,
+                 danbooru_tags_amount: int,
                  nunchaku_enabled: bool):
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
-        self.enhanced_prompt = None
+        self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.width = width
         self.height = height
@@ -193,6 +201,8 @@ class QwenEditPlusRequest:
         self.images = images
         self.enhance_prompt = enhance_prompt
         self.add_artist = add_artist
+        self.add_danbooru_tags = add_danbooru_tags
+        self.danbooru_tags_amount = danbooru_tags_amount
         self.nunchaku_enabled = nunchaku_enabled
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height},Lora:{self.lora_name},EP:{self.enhance_prompt},NUNCHAKU:{self.nunchaku_enabled}"
@@ -238,35 +248,25 @@ class QwenEditPlusRequest:
             kwargs["images"].append(bas64_image)
 
         if self.enhance_prompt:
-            self.enhanced_prompt = await self.avernus_client.llm_chat(
+            llm_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
-            if self.add_artist:
-                random_artist_prompt = await self.get_random_artist_prompt()
-                self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
-            kwargs["prompt"] = self.enhanced_prompt
-            try:
-                if self.nunchaku_enabled:
-                    base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
-                else:
-                    base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
-        else:
-            if self.add_artist:
-                random_artist_prompt = await self.get_random_artist_prompt()
-                self.prompt = f"{random_artist_prompt}. {self.prompt}"
-            kwargs["prompt"] = self.prompt
-            try:
-                if self.nunchaku_enabled:
-                    base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
-                else:
-                    base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)
-                images = await base64_to_images(base64_images)
-                await self.display_images(images)
-            except Exception as e:
-                print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
+            self.enhanced_prompt = llm_prompt
+        if self.add_artist:
+            random_artist_prompt = get_random_artist_prompt()
+            self.enhanced_prompt = f"{random_artist_prompt}. {self.enhanced_prompt}"
+        if self.add_danbooru_tags:
+            danbooru_tags = get_generic_danbooru_tags("./assets/danbooru.csv", self.danbooru_tags_amount)
+            self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
+        kwargs["prompt"] = self.enhanced_prompt
+        try:
+            if self.nunchaku_enabled:
+                base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
+            else:
+                base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)
+            images = await base64_to_images(base64_images)
+            await self.display_images(images)
+        except Exception as e:
+            print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):
@@ -279,10 +279,3 @@ class QwenEditPlusRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
-
-    @asyncSlot()
-    async def get_random_artist_prompt(self):
-        with open('assets/artist.json', 'r') as file:
-            data = json.load(file)
-            selected_artist = random.choice(data)
-            return selected_artist.get('prompt')
