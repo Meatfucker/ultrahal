@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit
                                QSlider, QWidget, QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout,
                                QLayout, QComboBox, QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem,
                                QPlainTextEdit, QStyle, QGraphicsWidget, QListWidget, QStackedWidget, QListWidgetItem)
-from PySide6.QtGui import QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QColor, QCursor, QFont, QIcon, QImage
+from PySide6.QtGui import (QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QTextDocument, QColor, QCursor, QFont,
+                           QIcon, QImage)
 from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QMimeData, Signal, QRectF
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
@@ -594,7 +595,7 @@ class LLMHistoryWidget(QScrollArea):
         self.main_layout = QVBoxLayout(self.container_widget)
         self.main_layout.setAlignment(Qt.AlignTop)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(2)  # tiny gap between messages
+        self.main_layout.setSpacing(0)  # tiny gap between messages
 
 
         self.verticalScrollBar().rangeChanged.connect(
@@ -717,13 +718,13 @@ class LLMHistoryObjectWidget(QFrame):
 
         self.main_layout = QHBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(4)  # small horizontal gap
+        self.main_layout.setSpacing(0)  # small horizontal gap
 
         # --- prompt container ---
         self.prompt_layout = QVBoxLayout()
         self.prompt_layout.setAlignment(Qt.AlignTop)
-        self.prompt_layout.setContentsMargins(4, 2, 4, 2)  # padding inside bubble
-        self.prompt_layout.setSpacing(2)
+        self.prompt_layout.setContentsMargins(0, 0, 0, 0)  # padding inside bubble
+        self.prompt_layout.setSpacing(0)
 
         self.prompt_container = QWidget()
         self.prompt_container.setStyleSheet(
@@ -789,7 +790,7 @@ class ModelPickerWidget(QVBoxLayout):
         super().__init__()
         self.data_list = []
         self.model_arch = model_arch
-        self.json_path = f"{self.model_arch}.json"
+        self.json_path = f"assets/{self.model_arch}.json"
 
         # Load or create the JSON file
         if os.path.exists(self.json_path):
@@ -1434,12 +1435,12 @@ class WordWrapLabel(QLabel):
         self.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-
     def heightForWidth(self, width):
-        doc = self.fontMetrics()
-        # calculate height based on text and label width
-        rect = doc.boundingRect(0, 0, width, 10000, Qt.TextWordWrap, self.text())
-        return rect.height()
+        doc = QTextDocument()
+        doc.setDefaultFont(self.font())
+        doc.setTextWidth(width)
+        doc.setPlainText(self.text())
+        return int(doc.size().height())
 
     def sizeHint(self):
         hint = super().sizeHint()
@@ -1456,6 +1457,7 @@ def show_context_menu(tabs, pixmap):
     flux_tab = tabs.named_widget("Flux")
     flux_inpaint_tab = tabs.named_widget("Flux Inpaint")
     flux_fill_tab = tabs.named_widget("Flux Fill")
+    framepack_tab = tabs.named_widget("Framepack")
     qwen_image_tab = tabs.named_widget("Qwen")
     qwen_image_inpaint_tab = tabs.named_widget("Qwen Inpaint")
     qwen_image_edit_tab = tabs.named_widget("Qwen Edit+")
@@ -1469,6 +1471,7 @@ def show_context_menu(tabs, pixmap):
     flux_menu = menu.addMenu("Flux")
     qwen_menu = menu.addMenu("Qwen")
     wan_menu = menu.addMenu("Wan")
+    framepack_menu = menu.addMenu("Framepack")
 
     sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
     sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
@@ -1479,6 +1482,8 @@ def show_context_menu(tabs, pixmap):
     flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
     flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
     flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
+    framepack_send_to_first_frame = wan_menu.addAction("Send to Framepack First Frame")
+    framepack_send_to_last_frame = wan_menu.addAction("Send to Framepack Last Frame")
     qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
     qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
     qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")
@@ -1518,6 +1523,11 @@ def show_context_menu(tabs, pixmap):
         flux_inpaint_tab.paint_area.set_image(pixmap)
     if action == flux_send_to_fill:
         flux_fill_tab.paint_area.set_image(pixmap)
+
+    if action == framepack_send_to_first_frame:
+        framepack_tab.first_frame_label.load_pixmap(pixmap)
+    if action == framepack_send_to_last_frame:
+        framepack_tab.last_frame_label.load_pixmap(pixmap)
 
     if action == qwen_image_send_to_i2i:
         qwen_image_tab.i2i_image_label.load_pixmap(pixmap)

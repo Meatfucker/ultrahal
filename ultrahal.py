@@ -14,6 +14,7 @@ from modules.chroma_tab import ChromaTab
 from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
+from modules.framepack_tab import FramepackTab
 from modules.llm_tab import LlmTab
 from modules.gallery import GalleryTab
 from modules.hunyuan_video_tab import HunyuanVideoTab
@@ -66,6 +67,7 @@ class MainWindow(QWidget):
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
+        self.framepack_tab = FramepackTab(self.avernus_client, self.tabs)
         self.hunyuan_video_tab = HunyuanVideoTab(self.avernus_client, self.tabs)
         self.image_processor_tab = ImageProcessorTab(self.avernus_client, self.tabs)
         self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
@@ -83,6 +85,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
+        self.tabs.addTab(self.framepack_tab, "Framepack")
         self.tabs.addTab(self.hunyuan_video_tab, "Hunyuan Video")
         self.tabs.addTab(self.llm_chat_tab, "LLM")
         self.tabs.addTab(self.image_processor_tab, "Processors")

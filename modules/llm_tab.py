@@ -45,13 +45,7 @@ class LlmTab(QWidget):
                                          background-color: #2c2c31; 
                                          color: #ddd; 
                                          font-size: 14px;
-                                         border-radius: 8px; /* rounded corners */}
-                           LLMHistoryWidget {border: 2px solid solid;
-                                             border-color: #28282f;
-                                             background-color: #2c2c31; 
-                                             color: #ddd;
-                                             font-size: 14px;
-                                             border-radius: 8px; /* rounded corners */}""")
+                                         border-radius: 8px; /* rounded corners */}""")
 
     def clear_history(self):
         self.history_viewer.clear_history()
