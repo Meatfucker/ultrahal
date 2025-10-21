@@ -2,19 +2,18 @@ import asyncio
 import time
 from typing import cast
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
+from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QPushButton, QSizePolicy,
                                 QVBoxLayout, QWidget)
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget,
+from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ModelPickerWidget,
                                 ParagraphInputBox, PromptPickerWidget, QueueObjectWidget, QueueViewer, ResolutionInput,
                                 SingleLineInputBox, VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
+from modules.utils import base64_to_images, get_generic_danbooru_tags, get_random_artist_prompt
 
 
 class HiDreamTab(QWidget):
@@ -161,7 +160,7 @@ class HiDreamRequest:
         if self.height == "":
             self.height = 1024
         self.ui_item: QueueObjectWidget | None = None
-        self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled}"
+        self.queue_info = f"{self.width}x{self.height}, {self.model_name}, EP:{self.enhance_prompt}"
 
     async def run(self):
         start_time = time.time()
@@ -177,7 +176,7 @@ class HiDreamRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"HiDream: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}, {self.strength}")
+        print(f"HiDream: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}")
 
         kwargs = {}
         if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
