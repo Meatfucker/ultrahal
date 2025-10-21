@@ -349,6 +349,22 @@ class AvernusClient:
             print(f"list_qwen_image_loras ERROR: {e}")
             return {"ERROR": str(e)}
 
+    async def list_sd15_loras(self):
+        """Fetches the list of sdxl LoRA filenames from the server."""
+        url = f"http://{self.base_url}/list_sd15_loras"
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(url)
+            if response.status_code == 200:
+                return response.json().get("loras", [])
+            else:
+                print(f"LIST SD15 LORAS ERROR: {response.status_code}, Response: {response.text}")
+                return {"ERROR": response.text}
+        except Exception as e:
+            print(f"list_sd15l_loras ERROR: {e}")
+            return {"ERROR": str(e)}
+
     async def list_sdxl_controlnets(self):
         """Fetches the list of sdxl controlnets from the server."""
         url = f"http://{self.base_url}/list_sdxl_controlnets"
@@ -673,6 +689,36 @@ class AvernusClient:
                 return response.json().get("images", [])
             else:
                 print(f"SD15 ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def sd15_inpaint_image(self, prompt, image=None, negative_prompt=None, model_name=None, width=None,
+                                 height=None, steps=None, batch_size=None, guidance_scale=None, mask_image=None,
+                                 strength=None, lora_name=None, scheduler=None, seed=None):
+        """This takes a prompt, and optional other variables and returns a list of base64 encoded images"""
+        url = f"http://{self.base_url}/sd15_inpaint_generate"
+        data = {"prompt": prompt,
+                "image": image,
+                "negative_prompt": negative_prompt,
+                "model_name": model_name,
+                "lora_name": lora_name,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "batch_size": batch_size,
+                "guidance_scale": guidance_scale,
+                "mask_image": mask_image,
+                "strength": strength,
+                "scheduler": scheduler,
+                "seed": seed}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json().get("images", [])
+            else:
+                print(f"SD15 INPAINT ERROR: {response.status_code}")
         except Exception as e:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}

@@ -20,6 +20,8 @@ from modules.gallery import GalleryTab
 from modules.hidream import HiDreamTab
 from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
+from modules.sd15_tab import SD15Tab
+from modules.sd15_inpaint_tab import SD15InpaintTab
 from modules.sdxl_tab import SdxlTab
 from modules.sdxl_inpaint_tab import SdxlInpaintTab
 from modules.queue import QueueTab
@@ -76,11 +78,12 @@ class MainWindow(QWidget):
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
         self.qwen_edit_tab = QwenEditPlusTab(self.avernus_client, self.tabs)
-        self.wan_tab = WanTab(self.avernus_client, self.tabs)
-        self.wan_vace_tab = WanVACETab(self.avernus_client, self.tabs)
+        self.sd15_tab = SD15Tab(self.avernus_client, self.tabs)
+        self.sd15_inpaint_tab = SD15InpaintTab(self.avernus_client, self.tabs)
         self.sdxl_tab = SdxlTab(self.avernus_client, self.tabs)
         self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
-
+        self.wan_tab = WanTab(self.avernus_client, self.tabs)
+        self.wan_vace_tab = WanVACETab(self.avernus_client, self.tabs)
 
         self.tabs.addTab(self.ace_tab, "ACE")
         self.tabs.addTab(self.chroma_tab, "Chroma")
@@ -95,6 +98,8 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
         self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit+")
+        self.tabs.addTab(self.sd15_tab, "SD 1.5")
+        self.tabs.addTab(self.sd15_inpaint_tab, "SD 1.5 Inpaint")
         self.tabs.addTab(self.sdxl_tab, "SDXL")
         self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
         self.tabs.addTab(self.wan_tab, "Wan")
@@ -163,6 +168,8 @@ class MainWindow(QWidget):
         await self.qwen_edit_tab.make_lora_list()
         await self.qwen_inpaint_tab.make_lora_list()
         await self.chroma_tab.make_lora_list()
+        await self.sd15_tab.make_lora_list()
+        await self.sd15_inpaint_tab.make_lora_list()
 
 
     def closeEvent(self, event):
