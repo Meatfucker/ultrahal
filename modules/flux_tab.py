@@ -1,6 +1,5 @@
 import asyncio
-import json
-import random
+import tempfile
 import time
 from typing import cast
 
@@ -289,22 +288,25 @@ class FluxRequest:
         if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled:
-            self.i2i_image.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.i2i_image.save(i2i_temp_file.name, quality=100)
+            image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if self.strength != "":
                 kwargs["strength"] = float(self.strength)
         if self.ip_adapter_enabled:
-            self.ip_adapter_image.save("temp.png", quality=100)
-            ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            ipadapter_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.ip_adapter_image.save(ipadapter_temp_file.name, quality=100)
+            ip_adapter_image = image_to_base64(ipadapter_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if self.ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
         if self.kontext_enabled:
-            self.kontext_image.save("temp.png", quality=100)
+            kontext_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.kontext_image.save(kontext_temp_file.name, quality=100)
             kontext_width = int(self.kontext_image.width())
             kontext_height = int(self.kontext_image.height())
-            kontext_image = image_to_base64("temp.png", kontext_width, kontext_height)
+            kontext_image = image_to_base64(kontext_temp_file.name, kontext_width, kontext_height)
             kwargs["image"] = str(kontext_image)
             kwargs["width"] = None
             kwargs["height"] = None

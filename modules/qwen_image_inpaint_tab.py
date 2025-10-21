@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -223,7 +224,7 @@ class QwenImageInpaintRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"FLUX INPAINT: {self.prompt}, {self.steps}, {self.batch_size}")
+        print(f"QWEN INPAINT: {self.prompt}, {self.steps}, {self.batch_size}")
 
         kwargs = {}
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
@@ -232,11 +233,13 @@ class QwenImageInpaintRequest:
         if self.true_cfg_scale != "":kwargs["true_cfg_scale"] = float(self.true_cfg_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
-        self.image.save("temp.png", quality=100)
-        image = image_to_base64("temp.png", self.width, self.height)
+        image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+        self.image.save(image_temp_file.name, quality=100)
+        image = image_to_base64(image_temp_file.name, self.width, self.height)
         kwargs["image"] = str(image)
-        self.mask_image.save("temp.png", quality=100)
-        mask_image = image_to_base64("temp.png", self.width, self.height)
+        mask_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+        self.mask_image.save(mask_temp_file.name, quality=100)
+        mask_image = image_to_base64(mask_temp_file.name, self.width, self.height)
         kwargs["mask_image"] = str(mask_image)
         kwargs["width"] = self.width
         kwargs["height"] = self.height

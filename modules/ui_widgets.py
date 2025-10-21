@@ -10,13 +10,68 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QVBoxLayout, QTextEdit
                                QGraphicsScene, QGraphicsPixmapItem, QLabel, QLineEdit, QCheckBox, QMenu, QFileDialog,
                                QSlider, QWidget, QFrame, QSizePolicy, QScrollArea, QMessageBox, QDialog, QGridLayout,
                                QLayout, QComboBox, QInputDialog, QButtonGroup, QGraphicsProxyWidget, QGraphicsItem,
-                               QPlainTextEdit, QStyle, QGraphicsWidget, QListWidget, QStackedWidget, QListWidgetItem)
+                               QPlainTextEdit, QStyle, QGraphicsWidget, QListWidget, QStackedWidget, QListWidgetItem,
+                               QStyledItemDelegate)
 from PySide6.QtGui import (QMouseEvent, QPixmap, QPainter, QPaintEvent, QPen, QTextDocument, QColor, QCursor, QFont,
                            QIcon, QImage)
-from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QMimeData, Signal, QRectF
+from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QMimeData, Signal, QRectF, QObject, QModelIndex
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 
+class CheckableComboBox(QComboBox):
+    """A QComboBox with checkable items for multi-selection."""
+    selectionChanged = Signal(list)
+
+    def __init__(self):
+        super().__init__()
+        self.setEditable(False)
+        self._updating_text = False
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setMaximumWidth(200)
+
+        # Use this delegate to prevent highlighting/flicker
+        delegate = QStyledItemDelegate()
+        self.setItemDelegate(delegate)
+
+        # Connect the view press to our custom handler
+        self.view().pressed.connect(self.on_item_pressed)
+
+    def on_item_pressed(self, index):
+        """Toggle check state without changing the current index."""
+        item = self.model().itemFromIndex(index)
+        if item is not None:
+            # Toggle state
+            item.setCheckState(Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked)
+            self._update_display_text()
+
+    def add_checkable_item(self, text, checked=False):
+        self.addItem(text)
+        item = self.model().item(self.count() - 1)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+        item.setData(Qt.Checked if checked else Qt.Unchecked, Qt.CheckStateRole)
+        self._update_display_text()
+
+    def checked_items(self):
+        return [
+            self.model().item(i).text()
+            for i in range(self.count())
+            if self.model().item(i).checkState() == Qt.Checked
+        ]
+
+    def set_checked_items(self, items):
+        for i in range(self.count()):
+            item = self.model().item(i)
+            item.setCheckState(Qt.Checked if item.text() in items else Qt.Unchecked)
+        self._update_display_text()
+
+    def _update_display_text(self):
+        """Show checked items in the combo text."""
+        self._updating_text = True
+        checked = self.checked_items()
+        display = ", ".join(checked) if checked else "Select prompts..."
+        self.setCurrentText(display)
+        self.selectionChanged.emit(checked)
+        self._updating_text = False
 
 class CircleWidget(QWidget):
     def __init__(self, parent=None):
@@ -53,7 +108,6 @@ class CircleWidget(QWidget):
         y = (rect.height() - diameter) // 2
 
         painter.drawEllipse(x, y, diameter, diameter)
-
 
 
 class ClickableAudio(QGraphicsProxyWidget):
@@ -785,7 +839,7 @@ class LLMHistoryObjectWidget(QFrame):
         self.removeRequested.emit(self)
 
 
-class ModelPickerWidget(QVBoxLayout):
+class ModelPickerWidget(QHBoxLayout):
     def __init__(self, model_arch, label=None):
         super().__init__()
         self.data_list = []
@@ -805,23 +859,27 @@ class ModelPickerWidget(QVBoxLayout):
 
         self.model_list_picker = QComboBox()
         self.model_list_picker.insertItems(0, self.data_list)
-        self.model_list_picker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.model_list_picker.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.dropdown_layout = QHBoxLayout()
+        self.model_list_picker.setMaximumWidth(650)        # ⬅️ limit width
+        self.model_list_picker.setMinimumWidth(120)
+        self.model_list_picker.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.addStretch()
         if label is not None:
             self.model_label = QLabel(label)
-            self.dropdown_layout.addWidget(self.model_label)
-        self.dropdown_layout.addWidget(self.model_list_picker)
-        self.button_layout = QHBoxLayout()
-        self.add_model_button = QPushButton("Add Model")
+            self.addWidget(self.model_label)
+        self.addWidget(self.model_list_picker)
+        self.add_model_button = QPushButton("+ Model")
+        self.add_model_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.add_model_button.setMaximumWidth(50)
         self.add_model_button.clicked.connect(self.add_model)
-        self.remove_model_button = QPushButton("Remove Model")
+        self.remove_model_button = QPushButton("- Model")
+        self.remove_model_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.remove_model_button.setMaximumWidth(50)
         self.remove_model_button.clicked.connect(self.remove_model)
-        self.button_layout.addWidget(self.add_model_button)
-        self.button_layout.addWidget(self.remove_model_button)
+        self.addWidget(self.add_model_button)
+        self.addWidget(self.remove_model_button)
 
-        self.addLayout(self.dropdown_layout)
-        self.addLayout(self.button_layout)
+
 
     def add_model(self):
         text, ok = QInputDialog.getText(None, "Add Model", "Enter model name:")
@@ -1070,6 +1128,118 @@ class ParagraphInputBox(QVBoxLayout):
                  border-radius: 8px; /* rounded corners */
              }
          """)
+
+class PromptManager(QObject):
+    promptsUpdated = Signal(list)
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, json_path="assets/prompts.json"):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, json_path="assets/prompts.json"):
+        # prevent QObject reinitialization
+        if self._initialized:
+            return
+        super().__init__()
+        self._initialized = True
+
+        self.json_path = json_path
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        self._prompts = self._load_from_file()
+
+    def _load_from_file(self):
+        try:
+            with open(self.json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if not isinstance(data, list):
+                    raise ValueError
+                return data
+        except (FileNotFoundError, json.JSONDecodeError, ValueError):
+            return []
+
+    def get_prompts(self):
+        return list(self._prompts)
+
+    def save_prompts(self):
+        with open(self.json_path, "w", encoding="utf-8") as f:
+            json.dump(self._prompts, f, ensure_ascii=False, indent=4)
+
+    def add_prompt(self, text):
+        text = text.strip()
+        if text and text not in self._prompts:
+            self._prompts.append(text)
+            self.save_prompts()
+            self.promptsUpdated.emit(self._prompts)
+
+    def remove_prompts(self, prompts_to_remove):
+        updated = [p for p in self._prompts if p not in prompts_to_remove]
+        if updated != self._prompts:
+            self._prompts = updated
+            self.save_prompts()
+            self.promptsUpdated.emit(self._prompts)
+
+class PromptPickerWidget(QWidget):
+    """Compact prompt selector using a checkable dropdown."""
+    def __init__(self):
+        super().__init__()
+        self.manager = PromptManager()
+
+        # Main horizontal layout
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(4)
+
+        # --- Combo Box ---
+        self.combo = CheckableComboBox()
+        self.combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.combo.setMaximumWidth(250)        # ⬅️ limit width
+        self.combo.setMinimumWidth(120)
+        self.combo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.layout.addStretch()
+        self.layout.addWidget(self.combo)
+
+        # --- Buttons ---
+        self.add_button = QPushButton("+ Prompt")
+        self.add_button.setFixedWidth(55)
+        self.remove_button = QPushButton("– Prompt")
+        self.remove_button.setFixedWidth(55)
+
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.remove_button)
+
+        # Load data
+        self.reload_list()
+
+        # Connections
+        self.add_button.clicked.connect(self.add_item)
+        self.remove_button.clicked.connect(self.remove_selected_items)
+        self.manager.promptsUpdated.connect(self.on_prompts_updated)
+
+    def reload_list(self):
+        self.combo.clear()
+        for item in self.manager.get_prompts():
+            self.combo.add_checkable_item(item)
+
+    def on_prompts_updated(self, new_prompts):
+        self.reload_list()
+
+    def add_item(self):
+        text, ok = QInputDialog.getText(self, "Add Prompt", "Enter new prompt:")
+        if ok and text.strip():
+            self.manager.add_prompt(text.strip())
+
+    def remove_selected_items(self):
+        selected = self.combo.checked_items()
+        if not selected:
+            QMessageBox.information(self, "No Selection", "Select one or more prompts to remove.")
+            return
+        self.manager.remove_prompts(selected)
+
+    def get_selected_items(self):
+        return self.combo.checked_items()
 
 class QueueObjectWidget(QFrame):
     def __init__(self, queue_object, hex_color, queue_view):
@@ -1467,11 +1637,11 @@ def show_context_menu(tabs, pixmap):
     save_action = menu.addAction("Save Image As...")
     copy_action = menu.addAction("Copy Image")
 
-    sdxl_menu = menu.addMenu("SDXL")
     flux_menu = menu.addMenu("Flux")
+    framepack_menu = menu.addMenu("Framepack")
+    sdxl_menu = menu.addMenu("SDXL")
     qwen_menu = menu.addMenu("Qwen")
     wan_menu = menu.addMenu("Wan")
-    framepack_menu = menu.addMenu("Framepack")
 
     sdxl_send_to_i2i = sdxl_menu.addAction("Send to I2I")
     sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to IP Adapter")
@@ -1482,8 +1652,8 @@ def show_context_menu(tabs, pixmap):
     flux_sent_to_kontext = flux_menu.addAction("Send to Kontext")
     flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
     flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
-    framepack_send_to_first_frame = wan_menu.addAction("Send to Framepack First Frame")
-    framepack_send_to_last_frame = wan_menu.addAction("Send to Framepack Last Frame")
+    framepack_send_to_first_frame = framepack_menu.addAction("Send to Framepack First Frame")
+    framepack_send_to_last_frame = framepack_menu.addAction("Send to Framepack Last Frame")
     qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
     qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
     qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")

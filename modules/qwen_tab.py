@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -272,15 +273,17 @@ class QwenRequest:
         if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled:
-            self.i2i_image.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.i2i_image.save(i2i_temp_file.name, quality=100)
+            image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             kwargs["strength"] = float(self.strength)
         if self.edit_enabled:
-            self.edit_image.save("temp.png", quality=100)
+            edit_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.edit_image.save(edit_temp_file.name, quality=100)
             edit_width = int(self.edit_image.width())
             edit_height = int(self.edit_image.height())
-            edit_image = image_to_base64("temp.png", edit_width, edit_height)
+            edit_image = image_to_base64(edit_temp_file.name, edit_width, edit_height)
             kwargs["image"] = str(edit_image)
             kwargs["width"] = None
             kwargs["height"] = None

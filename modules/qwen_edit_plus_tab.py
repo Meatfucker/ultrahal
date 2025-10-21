@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -224,7 +225,7 @@ class QwenEditPlusRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"QWEN: {self.prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}")
+        print(f"QWEN_EDIT_PLUS: {self.prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}")
 
         kwargs = {}
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
@@ -243,8 +244,9 @@ class QwenEditPlusRequest:
             kwargs["height"] = 1024
         kwargs["images"] = []
         for image in self.images:
-            image.save("temp.png", quality=100)
-            bas64_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            image.save(image_temp_file.name, quality=100)
+            bas64_image = image_to_base64(image_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["images"].append(bas64_image)
 
         if self.enhance_prompt:

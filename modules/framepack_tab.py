@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -153,7 +154,7 @@ class FramepackRequest:
         self.enhance_prompt = enhance_prompt
         self.model_name = model_name
         self.ui_item: QueueObjectWidget | None = None
-        self.queue_info = f"VACE: FF:{self.first_frame_enabled}, LF:{self.last_frame_enabled}"
+        self.queue_info = f"Framepack: {self.width}x{self.height} Frames: {self.frames} FF:{self.first_frame_enabled}, LF:{self.last_frame_enabled}"
 
     async def run(self):
         start_time = time.time()
@@ -187,13 +188,15 @@ class FramepackRequest:
         kwargs["prompt"] = self.enhanced_prompt
 
         if self.first_frame_enabled:
-            self.first_frame.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["first_frame"] = str(image)
+            first_frame_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.first_frame.save(first_frame_temp_file.name, quality=100)
+            image = image_to_base64(first_frame_temp_file.name, kwargs["width"], kwargs["height"])
+            kwargs["image"] = str(image)
         if self.last_frame_enabled:
-            self.last_frame.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
-            kwargs["last_frame"] = str(image)
+            last_frame_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.last_frame.save(last_frame_temp_file.name, quality=100)
+            image = image_to_base64(last_frame_temp_file.name, kwargs["width"], kwargs["height"])
+            kwargs["last_image"] = str(image)
         response = await self.avernus_client.framepack(**kwargs)
         await self.display_video(response)
 

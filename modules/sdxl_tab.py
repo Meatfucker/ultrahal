@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -313,20 +314,23 @@ class SDXLRequest:
         if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled:
-            self.i2i_image.save("temp.png", quality=100)
-            image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.i2i_image.save(i2i_temp_file.name, quality=100)
+            image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["image"] = str(image)
             if self.strength != "":
                 kwargs["strength"] = float(self.strength)
         if self.ip_adapter_enabled:
-            self.ip_adapter_image.save("temp.png", quality=100)
-            ip_adapter_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            ipadapter_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.ip_adapter_image.save(ipadapter_temp_file.name, quality=100)
+            ip_adapter_image = image_to_base64(ipadapter_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["ip_adapter_image"] = str(ip_adapter_image)
             if self.ip_adapter_strength != "":
                 kwargs["ip_adapter_strength"] = float(self.ip_adapter_strength)
         if self.controlnet_enabled:
-            self.controlnet_image.save("temp.png", quality=100)
-            controlnet_image = image_to_base64("temp.png", kwargs["width"], kwargs["height"])
+            controlnet_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.controlnet_image.save(controlnet_temp_file.name, quality=100)
+            controlnet_image = image_to_base64(controlnet_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["controlnet_image"] = str(controlnet_image)
             kwargs["controlnet_processor"] = str(self.controlnet_processor)
             if self.controlnet_strength != "":

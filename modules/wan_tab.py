@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -218,7 +219,8 @@ class WanRequest:
         kwargs["prompt"] = self.enhanced_prompt
 
         if self.i2v_image_enabled:
-            self.i2v_image.save("temp.png", quality=100)
+            i2v_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+            self.i2v_image.save(i2v_temp_file.name, quality=100)
             if self.width == "":
                 kwargs["width"] = None
                 i2v_width = int(self.i2v_image.width())
@@ -229,7 +231,7 @@ class WanRequest:
                 i2v_height = int(self.i2v_image.height())
             else:
                 i2v_height = int(self.height)
-            image = image_to_base64("temp.png", i2v_width, i2v_height)
+            image = image_to_base64(i2v_temp_file.name, i2v_width, i2v_height)
             kwargs["image"] = str(image)
         response = await self.avernus_client.wan_ti2v(**kwargs)
         await self.display_video(response)

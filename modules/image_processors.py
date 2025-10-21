@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -169,8 +170,9 @@ class RealESRGANRequest:
 
     async def generate(self):
         print("RealESRGAN:")
-        self.image.save("temp.png", quality=100)
-        base64_input = image_to_base64("temp.png", self.image.width(), self.image.height())
+        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+        self.image.save(temp_file.name, quality=100)
+        base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
         base64_images = await self.avernus_client.realesrgan(image=base64_input, scale=self.scale)
         images = await base64_to_images([base64_images])
         await self.display_images(images)
@@ -214,8 +216,9 @@ class Swin2SRRequest:
 
     async def generate(self):
         print("Swin2SR:")
-        self.image.save("temp.png", quality=100)
-        base64_input = image_to_base64("temp.png", self.image.width(), self.image.height())
+        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+        self.image.save(temp_file.name, quality=100)
+        base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
         base64_images = await self.avernus_client.swin2sr(image=base64_input)
         images = await base64_to_images([base64_images])
         await self.display_images(images)
