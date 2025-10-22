@@ -13,7 +13,7 @@ from modules.ui_widgets import (ClickableVideo, ImageGallery, ModelPickerWidget,
                                 QueueObjectWidget, QueueViewer, SingleLineInputBox, VerticalTabWidget)
 
 
-class HunyuanVideoTab(QWidget):
+class Kandinsky5Tab(QWidget):
     def __init__(self, avernus_client, tabs):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
@@ -22,15 +22,15 @@ class HunyuanVideoTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#191000"
+        self.queue_color: str = "#412A50"
 
         self.prompt_input = ParagraphInputBox("Prompt")
         self.negative_prompt_input = ParagraphInputBox("Negative Prompt")
-        self.model_picker = ModelPickerWidget("hunyuan_video", "Model")
-        self.frames_input = SingleLineInputBox("Frames", placeholder_text="129")
+        self.model_picker = ModelPickerWidget("kandinsky5", "Model")
+        self.frames_input = SingleLineInputBox("Frames", placeholder_text="121")
         self.steps_input = SingleLineInputBox("Steps", placeholder_text="50")
-        self.resolution_input = ResolutionInput(placeholder_x="1280", placeholder_y="720")
-        self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="6.0")
+        self.resolution_input = ResolutionInput(placeholder_x="768", placeholder_y="512")
+        self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="5.0")
         self.seed_input = SingleLineInputBox("Seed", placeholder_text="42")
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.submit_button = QPushButton("Submit")
@@ -62,7 +62,7 @@ class HunyuanVideoTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#190000"
+        self.queue_color: str = "#412A50"
         model_name = self.model_picker.model_list_picker.currentText()
         prompt = self.prompt_input.input.toPlainText()
         negative_prompt = self.negative_prompt_input.input.toPlainText()
@@ -74,19 +74,19 @@ class HunyuanVideoTab(QWidget):
         seed = self.seed_input.input.text()
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
 
-        request = HunyuanVideoRequest(avernus_client=self.avernus_client,
-                                      gallery=self.gallery,
-                                      tabs=self.tabs,
-                                      prompt=prompt,
-                                      negative_prompt=negative_prompt,
-                                      frames=frames,
-                                      steps=steps,
-                                      width=width,
-                                      height=height,
-                                      guidance_scale=guidance_scale,
-                                      seed=seed,
-                                      enhance_prompt=enhance_prompt,
-                                      model_name=model_name)
+        request = Kandinsky5Request(avernus_client=self.avernus_client,
+                                    gallery=self.gallery,
+                                    tabs=self.tabs,
+                                    prompt=prompt,
+                                    negative_prompt=negative_prompt,
+                                    frames=frames,
+                                    steps=steps,
+                                    width=width,
+                                    height=height,
+                                    guidance_scale=guidance_scale,
+                                    seed=seed,
+                                    enhance_prompt=enhance_prompt,
+                                    model_name=model_name)
         queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
 
 
@@ -95,7 +95,7 @@ class HunyuanVideoTab(QWidget):
         self.tabs.parent().request_event.set()
 
 
-class HunyuanVideoRequest:
+class Kandinsky5Request:
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -138,7 +138,7 @@ class HunyuanVideoRequest:
 
     @asyncSlot()
     async def generate(self):
-        print(f"HUNYUAN_VIDEO: {self.prompt}, {self.frames}")
+        print(f"KANDINSKY5: {self.prompt}, {self.frames}")
         if self.enhance_prompt:
             llm_prompt = await self.avernus_client.llm_chat(
                 f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
@@ -153,7 +153,7 @@ class HunyuanVideoRequest:
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
-        response = await self.avernus_client.hunyuan_ti2v(**kwargs)
+        response = await self.avernus_client.kandinsky5_t2v(**kwargs)
         await self.display_video(response)
 
     @asyncSlot()

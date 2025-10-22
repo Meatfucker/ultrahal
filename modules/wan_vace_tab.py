@@ -33,6 +33,7 @@ class WanVACETab(QWidget):
         self.prompt_input = ParagraphInputBox("Prompt")
         self.negative_prompt_input =  ParagraphInputBox("Negative Prompt")
         self.frames_input = SingleLineInputBox("Frames", placeholder_text="81")
+        self.steps_input = SingleLineInputBox("Steps", placeholder_text="50")
         self.resolution_input = ResolutionInput(placeholder_x="832", placeholder_y="480")
         self.guidance_scale_input = SingleLineInputBox("Guidance Scale", placeholder_text="5.0")
         self.flow_shift_input = SingleLineInputBox("Flow Shift", placeholder_text="3.0")
@@ -62,6 +63,7 @@ class WanVACETab(QWidget):
 
         config_layout.addLayout(self.model_picker)
         config_layout.addLayout(self.frames_input)
+        config_layout.addLayout(self.steps_input)
         config_layout.addWidget(self.resolution_input)
         config_layout.addLayout(self.guidance_scale_input)
         config_layout.addLayout(self.flow_shift_input)
@@ -81,6 +83,7 @@ class WanVACETab(QWidget):
         prompt = self.prompt_input.input.toPlainText()
         negative_prompt = self.negative_prompt_input.input.toPlainText()
         frames = self.frames_input.input.text()
+        steps = self.steps_input.input.text()
         width = self.resolution_input.width_label.input.text()
         height = self.resolution_input.height_label.input.text()
         guidance_scale = self.guidance_scale_input.input.text()
@@ -104,6 +107,7 @@ class WanVACETab(QWidget):
                                  prompt=prompt,
                                  negative_prompt=negative_prompt,
                                  frames=frames,
+                                 steps=steps,
                                  width=width,
                                  height=height,
                                  guidance_scale=guidance_scale,
@@ -131,6 +135,7 @@ class WanVACERequest:
                  prompt: str,
                  negative_prompt: str,
                  frames: str,
+                 steps: str,
                  width: str,
                  height: str,
                  guidance_scale: str,
@@ -149,6 +154,7 @@ class WanVACERequest:
         self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
         self.frames = frames
+        self.steps = steps
         self.width = width
         self.height = height
         self.guidance_scale = guidance_scale
@@ -178,6 +184,7 @@ class WanVACERequest:
         kwargs = {}
         if self.negative_prompt != "": kwargs["negative_prompt"] = str(self.negative_prompt)
         if self.frames != "": kwargs["num_frames"] = int(self.frames)
+        if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.width != "":
             kwargs["width"] = int(self.width)
         else:

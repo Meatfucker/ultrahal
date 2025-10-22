@@ -15,11 +15,12 @@ from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
 from modules.framepack_tab import FramepackTab
-from modules.llm_tab import LlmTab
 from modules.gallery import GalleryTab
 from modules.hidream import HiDreamTab
 from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
+from modules.kandinsky5_tab import Kandinsky5Tab
+from modules.llm_tab import LlmTab
 from modules.sd15_tab import SD15Tab
 from modules.sd15_inpaint_tab import SD15InpaintTab
 from modules.sdxl_tab import SdxlTab
@@ -74,6 +75,7 @@ class MainWindow(QWidget):
         self.hidream_tab = HiDreamTab(self.avernus_client, self.tabs)
         self.hunyuan_video_tab = HunyuanVideoTab(self.avernus_client, self.tabs)
         self.image_processor_tab = ImageProcessorTab(self.avernus_client, self.tabs)
+        self.kandinsky5_tab = Kandinsky5Tab(self.avernus_client, self.tabs)
         self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
@@ -93,6 +95,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.framepack_tab, "Framepack")
         self.tabs.addTab(self.hidream_tab, "HiDream")
         self.tabs.addTab(self.hunyuan_video_tab, "Hunyuan Video")
+        self.tabs.addTab(self.kandinsky5_tab, "Kandinsky5")
         self.tabs.addTab(self.llm_chat_tab, "LLM")
         self.tabs.addTab(self.image_processor_tab, "Processors")
         self.tabs.addTab(self.qwen_tab, "Qwen")
