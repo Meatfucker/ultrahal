@@ -21,6 +21,7 @@ from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
 from modules.kandinsky5_tab import Kandinsky5Tab
 from modules.llm_tab import LlmTab
+from modules.sana_sprint_tab import SanaSprintTab
 from modules.sd15_tab import SD15Tab
 from modules.sd15_inpaint_tab import SD15InpaintTab
 from modules.sdxl_tab import SdxlTab
@@ -80,6 +81,7 @@ class MainWindow(QWidget):
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
         self.qwen_edit_tab = QwenEditPlusTab(self.avernus_client, self.tabs)
+        self.sana_sprint_tab = SanaSprintTab(self.avernus_client, self.tabs)
         self.sd15_tab = SD15Tab(self.avernus_client, self.tabs)
         self.sd15_inpaint_tab = SD15InpaintTab(self.avernus_client, self.tabs)
         self.sdxl_tab = SdxlTab(self.avernus_client, self.tabs)
@@ -101,6 +103,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
         self.tabs.addTab(self.qwen_edit_tab, "Qwen Edit+")
+        self.tabs.addTab(self.sana_sprint_tab, "Sana Sprint")
         self.tabs.addTab(self.sd15_tab, "SD 1.5")
         self.tabs.addTab(self.sd15_inpaint_tab, "SD 1.5 Inpaint")
         self.tabs.addTab(self.sdxl_tab, "SDXL")

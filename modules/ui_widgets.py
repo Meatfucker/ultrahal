@@ -1624,19 +1624,28 @@ class WordWrapLabel(QLabel):
 def show_context_menu(tabs, pixmap):
 
     chroma_tab = tabs.named_widget("Chroma")
+
     flux_tab = tabs.named_widget("Flux")
     flux_inpaint_tab = tabs.named_widget("Flux Inpaint")
     flux_fill_tab = tabs.named_widget("Flux Fill")
+
     framepack_tab = tabs.named_widget("Framepack")
+
     qwen_image_tab = tabs.named_widget("Qwen")
     qwen_image_inpaint_tab = tabs.named_widget("Qwen Inpaint")
     qwen_image_edit_tab = tabs.named_widget("Qwen Edit+")
+
+    sana_sprint_tab = tabs.named_widget("Sana Sprint")
+
     sd15_tab = tabs.named_widget("SD 1.5")
     sd15_inpaint_tab = tabs.named_widget("SD 1.5 Inpaint")
+
     sdxl_tab = tabs.named_widget("SDXL")
     sdxl_inpaint_tab = tabs.named_widget("SDXL Inpaint")
+
     wan_tab = tabs.named_widget("Wan")
     wan_vace_tab = tabs.named_widget("Wan VACE")
+
     menu = QMenu()
     save_action = menu.addAction("Save Image As...")
     copy_action = menu.addAction("Copy Image")
@@ -1644,31 +1653,40 @@ def show_context_menu(tabs, pixmap):
     chroma_menu = menu.addMenu("Chroma")
     flux_menu = menu.addMenu("Flux")
     framepack_menu = menu.addMenu("Framepack")
+    sana_sprint_menu = menu.addMenu("Sana Sprint")
     sd15_menu = menu.addMenu("SD 1.5")
     sdxl_menu = menu.addMenu("SDXL")
     qwen_menu = menu.addMenu("Qwen")
     wan_menu = menu.addMenu("Wan")
 
     chroma_send_to_i2i = chroma_menu.addAction("Send to Chroma I2I")
-    sd15_send_to_i2i = sd15_menu.addAction("Send to SD 1.5 I2I")
-    sd15_send_to_inpaint = sd15_menu.addAction("Send to SD 1.5 Inpaint")
-    sdxl_send_to_i2i = sdxl_menu.addAction("Send to SDXL I2I")
-    sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to SDXL IP Adapter")
-    sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to SDXL Controlnet")
-    sdxl_send_to_inpaint = sdxl_menu.addAction("Send to SDXL Inpaint")
+
     flux_send_to_i2i = flux_menu.addAction("Send to Flux I2I")
     flux_send_to_ipadapter = flux_menu.addAction("Send to Flux IP Adapter")
     flux_sent_to_kontext = flux_menu.addAction("Send to Flux Kontext")
     flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
     flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
+
     framepack_send_to_first_frame = framepack_menu.addAction("Send to Framepack First Frame")
     framepack_send_to_last_frame = framepack_menu.addAction("Send to Framepack Last Frame")
+
     qwen_image_send_to_i2i = qwen_menu.addAction("Send to Qwen Image")
     qwen_image_send_to_edit = qwen_menu.addAction("Send to Qwen Image Edit")
     qwen_image_send_to_inpaint = qwen_menu.addAction("Send to Qwen Image Inpaint")
     qwen_image_edit_send_to_1 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 1")
     qwen_image_edit_send_to_2 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 2")
     qwen_image_edit_send_to_3 = qwen_menu.addAction("Send to Qwen Image Edit Plus image 3")
+
+    sana_sprint_send_to_i2i = sana_sprint_menu.addAction("Send to Sana Sprint I2I")
+
+    sd15_send_to_i2i = sd15_menu.addAction("Send to SD 1.5 I2I")
+    sd15_send_to_inpaint = sd15_menu.addAction("Send to SD 1.5 Inpaint")
+
+    sdxl_send_to_i2i = sdxl_menu.addAction("Send to SDXL I2I")
+    sdxl_send_to_ipadapter = sdxl_menu.addAction("Send to SDXL IP Adapter")
+    sdxl_sent_to_controlnet = sdxl_menu.addAction("Send to SDXL Controlnet")
+    sdxl_send_to_inpaint = sdxl_menu.addAction("Send to SDXL Inpaint")
+
     wan_send_to_i2v = wan_menu.addAction("Send to Wan I2V")
     wan_vace_send_to_first_frame = wan_menu.addAction("Send to WAN VACE First Frame")
     wan_vace_send_to_last_frame = wan_menu.addAction("Send to WAN VACE Last Frame")
@@ -1683,21 +1701,6 @@ def show_context_menu(tabs, pixmap):
 
     if action == chroma_send_to_i2i:
         chroma_tab.i2i_image_label.load_pixmap(pixmap)
-
-    if action == sd15_send_to_i2i:
-        sd15_tab.i2i_image_label.load_pixmap(pixmap)
-    if action == sd15_send_to_inpaint:
-        sd15_inpaint_tab.paint_area.set_image(pixmap)
-
-    if action == sdxl_send_to_i2i:
-        sdxl_tab.i2i_image_label.load_pixmap(pixmap)
-    if action == sdxl_send_to_ipadapter:
-        sdxl_tab.ipadapter_image_label.load_pixmap(pixmap)
-    if action == sdxl_sent_to_controlnet:
-        sdxl_tab.controlnet_image_label.load_pixmap(pixmap)
-
-    if action == sdxl_send_to_inpaint:
-        sdxl_inpaint_tab.paint_area.set_image(pixmap)
 
     if action == flux_send_to_i2i:
         flux_tab.i2i_image_label.load_pixmap(pixmap)
@@ -1728,6 +1731,24 @@ def show_context_menu(tabs, pixmap):
         qwen_image_edit_tab.edit_image_2_label.load_pixmap(pixmap)
     if action == qwen_image_edit_send_to_3:
         qwen_image_edit_tab.edit_image_3_label.load_pixmap(pixmap)
+
+    if action == sana_sprint_send_to_i2i:
+        sana_sprint_tab.i2i_image_label.load_pixmap(pixmap)
+
+    if action == sd15_send_to_i2i:
+        sd15_tab.i2i_image_label.load_pixmap(pixmap)
+    if action == sd15_send_to_inpaint:
+        sd15_inpaint_tab.paint_area.set_image(pixmap)
+
+    if action == sdxl_send_to_i2i:
+        sdxl_tab.i2i_image_label.load_pixmap(pixmap)
+    if action == sdxl_send_to_ipadapter:
+        sdxl_tab.ipadapter_image_label.load_pixmap(pixmap)
+    if action == sdxl_sent_to_controlnet:
+        sdxl_tab.controlnet_image_label.load_pixmap(pixmap)
+
+    if action == sdxl_send_to_inpaint:
+        sdxl_inpaint_tab.paint_area.set_image(pixmap)
 
     if action == wan_send_to_i2v:
         wan_tab.i2v_image_label.load_pixmap(pixmap)
