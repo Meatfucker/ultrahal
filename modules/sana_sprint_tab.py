@@ -37,19 +37,6 @@ class SanaSprintTab(QWidget):
         self.prompt_picker = PromptPickerWidget()
         self.prompt_label = ParagraphInputBox("Prompt")
         self.model_picker = ModelPickerWidget("sana_sprint")
-        self.lora_list = QListWidget()
-        self.lora_list.setSelectionMode(QListWidget.MultiSelection)
-        self.lora_list.setStyleSheet("""
-             QListWidget {
-                 border: none;
-                 background-color: #2c2c31;
-                 color: #ddd;
-                 font-size: 14px;
-                 border: 2px solid solid;
-                 border-color: #28282f;
-                 border-radius: 8px; /* rounded corners */
-             }
-         """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
@@ -76,7 +63,6 @@ class SanaSprintTab(QWidget):
         self.prompt_layout.addLayout(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
         self.prompt_layout.addLayout(self.prompt_label)
-        self.prompt_layout.addWidget(self.lora_list)
         self.prompt_layout.addWidget(self.prompt_enhance_checkbox)
         self.prompt_layout.addWidget(self.add_random_artist_checkbox)
         self.prompt_layout.addWidget(self.add_random_danbooru_tags_checkbox)
@@ -110,13 +96,6 @@ class SanaSprintTab(QWidget):
         max_timesteps = self.max_timesteps_label.input.text()
         intermediate_timesteps = self.intermediate_timesteps_label.input.text()
         model_name = self.model_picker.model_list_picker.currentText()
-        lora_items = self.lora_list.selectedItems()
-        lora_name = "<None>"
-        if lora_items:
-            lora_name = []
-            for lora_list_item in lora_items:
-                lora_name.append(lora_list_item.text())
-
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
@@ -139,7 +118,6 @@ class SanaSprintTab(QWidget):
                                         steps=steps,
                                         batch_size=batch_size,
                                         guidance_scale=guidance_scale,
-                                        lora_name=lora_name,
                                         strength=strength,
                                         i2i_image_enabled=i2i_image_enable,
                                         i2i_image=i2i_image,
@@ -168,7 +146,6 @@ class SanaSprintRequest:
                  height: str,
                  steps: str,
                  batch_size: str,
-                 lora_name: list,
                  guidance_scale: str,
                  strength: float,
                  i2i_image_enabled: bool,
@@ -195,7 +172,6 @@ class SanaSprintRequest:
         self.max_timesteps = max_timesteps
         self.intermediate_timesteps = intermediate_timesteps
         self.model_name = model_name
-        self.lora_name = lora_name
         self.strength = strength
         self.i2i_image_enabled = i2i_image_enabled
         self.i2i_image = i2i_image
@@ -208,7 +184,7 @@ class SanaSprintRequest:
         if self.height == "":
             self.height = 1024
         self.ui_item: QueueObjectWidget | None = None
-        self.queue_info = f"{self.width}x{self.height}, {self.model_name}, {self.lora_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled}"
+        self.queue_info = f"{self.width}x{self.height}, {self.model_name},EP:{self.enhance_prompt},I2I:{self.i2i_image_enabled}"
 
     async def run(self):
         start_time = time.time()
@@ -224,7 +200,7 @@ class SanaSprintRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"Chroma: {self.prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}, {self.strength}")
+        print(f"Chroma: {self.prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.strength}")
 
         kwargs = {}
         if self.steps != "": kwargs["steps"] = int(self.steps)
@@ -233,7 +209,6 @@ class SanaSprintRequest:
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.max_timesteps != "": kwargs["max_timesteps"] = float(self.max_timesteps)
         if self.intermediate_timesteps != "": kwargs["intermediate_timesteps"] = float(self.intermediate_timesteps)
-        if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         kwargs["model_name"] = str(self.model_name)
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
