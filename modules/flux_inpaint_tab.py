@@ -47,6 +47,7 @@ class FluxInpaintTab(QWidget):
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
+        self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.lora_list.setStyleSheet("""
@@ -67,6 +68,7 @@ class FluxInpaintTab(QWidget):
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="7.0")
+        self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="1.0 Above 1.0 to enable negative prompts")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
 
         self.paint_layout = QVBoxLayout()
@@ -85,6 +87,7 @@ class FluxInpaintTab(QWidget):
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addWidget(self.lora_list)
         self.config_layout.addLayout(self.prompt_label)
+        self.config_layout.addLayout(self.negative_prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
@@ -94,6 +97,7 @@ class FluxInpaintTab(QWidget):
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
+        self.config_widgets_layout.addLayout(self.true_cfg_scale_label)
         self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
@@ -104,9 +108,11 @@ class FluxInpaintTab(QWidget):
     @asyncSlot()
     async def on_submit(self):
         prompt = self.prompt_label.input.toPlainText()
+        negative_prompt = self.negative_prompt_label.input.toPlainText()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
+        true_cfg_scale = self.true_cfg_scale_label.input.text()
         seed = self.seed_label.input.text()
         model_name = self.model_picker.model_list_picker.currentText()
         lora_items = self.lora_list.selectedItems()
@@ -128,9 +134,11 @@ class FluxInpaintTab(QWidget):
                                          gallery=self.gallery,
                                          tabs=self.tabs,
                                          prompt=prompt,
+                                         negative_prompt=negative_prompt,
                                          steps=steps,
                                          batch_size=batch_size,
                                          guidance_scale=guidance_scale,
+                                         true_cfg_scale=true_cfg_scale,
                                          seed=seed,
                                          lora_name=lora_name,
                                          enhance_prompt=enhance_prompt,
@@ -165,9 +173,11 @@ class FluxInpaintRequest:
                  gallery: ImageGallery,
                  tabs: VerticalTabWidget,
                  prompt: str,
+                 negative_prompt: str,
                  steps: str,
                  batch_size: str,
                  guidance_scale: str,
+                 true_cfg_scale: str,
                  seed: str,
                  enhance_prompt: bool,
                  width: str,
@@ -184,10 +194,12 @@ class FluxInpaintRequest:
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.negative_prompt = negative_prompt
         self.enhanced_prompt = prompt
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
+        self.true_cfg_scale = true_cfg_scale
         self.seed = seed
         self.model_name = model_name
         self.lora_name = lora_name
@@ -221,9 +233,11 @@ class FluxInpaintRequest:
         print(f"FLUX INPAINT: {self.prompt}, {self.steps}, {self.batch_size}")
 
         kwargs = {}
+        if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
+        if self.true_cfg_scale != "": kwargs["true_cfg_scale"] = float(self.true_cfg_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")

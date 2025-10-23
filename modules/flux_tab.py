@@ -35,6 +35,7 @@ class FluxTab(QWidget):
         self.submit_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
         self.prompt_label = ParagraphInputBox("Prompt")
+        self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.model_picker = ModelPickerWidget("flux-dev")
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
@@ -57,6 +58,7 @@ class FluxTab(QWidget):
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="3.5")
+        self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="1.0 Above 1.0 to enable negative prompts")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
@@ -75,6 +77,7 @@ class FluxTab(QWidget):
         self.kontext_layout = QVBoxLayout()
 
         self.prompt_layout.addLayout(self.prompt_label)
+        self.prompt_layout.addLayout(self.negative_prompt_label)
 
         self.config_widgets_layout.addLayout(self.model_picker)
         self.config_widgets_layout.addWidget(self.lora_list)
@@ -86,6 +89,7 @@ class FluxTab(QWidget):
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)
+        self.config_widgets_layout.addLayout(self.true_cfg_scale_label)
         self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
@@ -112,11 +116,13 @@ class FluxTab(QWidget):
     async def on_submit(self):
         self.queue_color: str = "#002f39"
         prompt = self.prompt_label.input.toPlainText()
+        negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
         height = self.resolution_widget.height_label.input.text()
         steps = self.steps_label.input.text()
         batch_size = self.batch_size_label.input.text()
         guidance_scale = self.guidance_scale_label.input.text()
+        true_cfg_scale = self.true_cfg_scale_label.input.text()
         seed = self.seed_label.input.text()
         model_name = self.model_picker.model_list_picker.currentText()
         lora_items = self.lora_list.selectedItems()
@@ -154,6 +160,7 @@ class FluxTab(QWidget):
                                   gallery=self.gallery,
                                   tabs=self.tabs,
                                   prompt=prompt,
+                                  negative_prompt=negative_prompt,
                                   width=width,
                                   height=height,
                                   steps=steps,
@@ -169,6 +176,7 @@ class FluxTab(QWidget):
                                   kontext_image=kontext_image,
                                   enhance_prompt=enhance_prompt,
                                   guidance_scale=guidance_scale,
+                                  true_cfg_scale=true_cfg_scale,
                                   seed=seed,
                                   add_artist=add_artist,
                                   add_danbooru_tags=add_danbooru_tags,
@@ -210,6 +218,7 @@ class FluxRequest:
                  gallery: ImageGallery,
                  tabs: VerticalTabWidget,
                  prompt: str,
+                 negative_prompt: str,
                  width: str,
                  height: str,
                  steps: str,
@@ -219,6 +228,7 @@ class FluxRequest:
                  ip_adapter_strength: float,
                  i2i_image_enabled: bool,
                  guidance_scale: str,
+                 true_cfg_scale: str,
                  seed: str,
                  i2i_image: QPixmap,
                  ip_adapter_enabled: bool,
@@ -234,12 +244,14 @@ class FluxRequest:
         self.gallery = gallery
         self.tabs = tabs
         self.prompt = prompt
+        self.negative_prompt = negative_prompt
         self.enhanced_prompt = prompt
         self.width = width
         self.height = height
         self.steps = steps
         self.batch_size = batch_size
         self.guidance_scale = guidance_scale
+        self.true_cfg_scale = true_cfg_scale
         self.seed = seed
         self.model_name = model_name
         self.lora_name = lora_name
@@ -276,12 +288,14 @@ class FluxRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"FLUX: {self.prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}, {self.strength}")
+        print(f"FLUX: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}, {self.lora_name}, {self.strength}")
 
         kwargs = {}
+        if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
         if self.steps != "": kwargs["steps"] = int(self.steps)
         if self.batch_size != "": kwargs["batch_size"] = int(self.batch_size)
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
+        if self.true_cfg_scale != "": kwargs["true_cfg_scale"] = float(self.true_cfg_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         if self.width is not None: kwargs["width"] = int(self.width)
