@@ -5,8 +5,6 @@ import io
 import json
 import random
 
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 from PIL import Image
 
 
