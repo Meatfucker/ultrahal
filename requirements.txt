@@ -4,6 +4,7 @@ pydub
 requests~=2.32.3
 httpx~=0.28.1
 loguru~=0.7.3
+matplotlib
 PySide6~=6.8.2.1
 qasync~=0.27.1
 pillow~=11.1.0
