@@ -37,6 +37,30 @@ class AvernusClient:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
+    async def auraflow_image(self, prompt, negative_prompt=None, model_name=None, width=None, height=None, steps=None,
+                            batch_size=None, seed=None, guidance_scale=None):
+        """This takes a prompt and optional other variables and returns a list of base64 encoded images"""
+        url = f"http://{self.base_url}/auraflow_generate"
+        data = {"prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "model_name": model_name,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "batch_size": batch_size,
+                "seed": seed,
+                "guidance_scale": guidance_scale}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json().get("images", [])
+            else:
+                print(f"AURAFLOW ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {"ERROR": str(e)}
+
     async def check_status(self):
         """Attempts to contact the avernus server and returns a dict with status information from the server"""
         url = f"http://{self.base_url}/status"
@@ -449,6 +473,30 @@ class AvernusClient:
                 return {"ERROR": response.text}
         except Exception as e:
             print(f"list_sdxl_schedulers ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def lumina2_image(self, prompt, negative_prompt=None, model_name=None, width=None, height=None, steps=None,
+                            batch_size=None, seed=None, guidance_scale=None):
+        """This takes a prompt and optional other variables and returns a list of base64 encoded images"""
+        url = f"http://{self.base_url}/lumina2_generate"
+        data = {"prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "model_name": model_name,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "batch_size": batch_size,
+                "seed": seed,
+                "guidance_scale": guidance_scale}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json().get("images", [])
+            else:
+                print(f"LUMINA2 ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def llm_chat(self, prompt, model_name=None, messages=None):

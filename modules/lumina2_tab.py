@@ -16,7 +16,7 @@ from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery,
 from modules.utils import base64_to_images, get_generic_danbooru_tags, get_random_artist_prompt
 
 
-class HiDreamTab(QWidget):
+class Lumina2Tab(QWidget):
     def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
@@ -35,7 +35,7 @@ class HiDreamTab(QWidget):
         self.prompt_label = ParagraphInputBox("Prompt")
         self.negative_prompt_picker = PromptPickerWidget()
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
-        self.model_picker = ModelPickerWidget("hidream")
+        self.model_picker = ModelPickerWidget("lumina2")
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
@@ -43,7 +43,7 @@ class HiDreamTab(QWidget):
         self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
-        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="5.0")
+        self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="4.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
 
         self.main_layout = QHBoxLayout()
@@ -94,7 +94,7 @@ class HiDreamTab(QWidget):
         danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
 
         try:
-            request = HiDreamRequest(avernus_client=self.avernus_client,
+            request = Lumina2Request(avernus_client=self.avernus_client,
                                      gallery=self.gallery,
                                      tabs=self.tabs,
                                      prompt=prompt,
@@ -115,10 +115,10 @@ class HiDreamTab(QWidget):
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
         except Exception as e:
-            print(f"HiDream on_submit EXCEPTION: {e}")
+            print(f"Lumina 2 on_submit EXCEPTION: {e}")
 
 
-class HiDreamRequest:
+class Lumina2Request:
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -174,7 +174,7 @@ class HiDreamRequest:
     @asyncSlot()
     async def generate(self):
         """API call to generate the images and convert them from base64"""
-        print(f"HiDream: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}")
+        print(f"Lumina2: {self.prompt}, {self.negative_prompt}, {self.width}, {self.height}, {self.steps}, {self.batch_size}")
 
         kwargs = {}
         if self.negative_prompt != "": kwargs["negative_prompt"] = self.negative_prompt
@@ -198,11 +198,11 @@ class HiDreamRequest:
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 
         try:
-            base64_images = await self.avernus_client.hidream_image(self.enhanced_prompt, **kwargs)
+            base64_images = await self.avernus_client.lumina2_image(self.enhanced_prompt, **kwargs)
             images = await base64_to_images(base64_images)
             await self.display_images(images)
         except Exception as e:
-            print(f"HIDREAM REQUEST EXCEPTION: {e}")
+            print(f"LUMINA2 REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):

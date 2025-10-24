@@ -26,7 +26,6 @@ class QwenImageInpaintTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#003900"
 
         self.paint_area = PainterWidget()
 
@@ -127,27 +126,27 @@ class QwenImageInpaintTab(QWidget):
         strength = round(float(self.strength_slider.slider.value() * 0.01), 2)
 
         try:
-            request = QwenImageInpaintRequest(avernus_client=self.avernus_client,
-                                              gallery=self.gallery,
-                                              tabs=self.tabs,
-                                              prompt=prompt,
-                                              negative_prompt=negative_prompt,
-                                              steps=steps,
-                                              batch_size=batch_size,
-                                              true_cfg_scale=true_cfg_scale,
-                                              seed=seed,
-                                              lora_name=lora_name,
-                                              enhance_prompt=enhance_prompt,
-                                              add_artist=add_artist,
-                                              add_danbooru_tags=add_danbooru_tags,
-                                              danbooru_tags_amount=danbooru_tags_amount,
-                                              width=width,
-                                              height=height,
-                                              image=self.paint_area.original_image,
-                                              mask_image=self.paint_area.original_mask,
-                                              strength=strength,
-                                              nunchaku_enabled=nunchaku_enabled)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            request = QwenInpaintRequest(avernus_client=self.avernus_client,
+                                         gallery=self.gallery,
+                                         tabs=self.tabs,
+                                         prompt=prompt,
+                                         negative_prompt=negative_prompt,
+                                         steps=steps,
+                                         batch_size=batch_size,
+                                         true_cfg_scale=true_cfg_scale,
+                                         seed=seed,
+                                         lora_name=lora_name,
+                                         enhance_prompt=enhance_prompt,
+                                         add_artist=add_artist,
+                                         add_danbooru_tags=add_danbooru_tags,
+                                         danbooru_tags_amount=danbooru_tags_amount,
+                                         width=width,
+                                         height=height,
+                                         image=self.paint_area.original_image,
+                                         mask_image=self.paint_area.original_mask,
+                                         strength=strength,
+                                         nunchaku_enabled=nunchaku_enabled)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -164,7 +163,7 @@ class QwenImageInpaintTab(QWidget):
         self.lora_list.insertItems(0, loras)
 
 
-class QwenImageInpaintRequest:
+class QwenInpaintRequest:
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,

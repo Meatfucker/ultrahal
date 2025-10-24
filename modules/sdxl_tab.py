@@ -27,7 +27,6 @@ class SdxlTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#12001b"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -117,7 +116,6 @@ class SdxlTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#12001b"
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
@@ -141,19 +139,16 @@ class SdxlTab(QWidget):
         controlnet_processor = self.controlnet_list.currentText()
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
-            self.queue_color: str = "#240036"
             i2i_image = self.i2i_image_label.input_image
         else:
             i2i_image = None
         ip_adapter_enable = self.ipadapter_image_label.enable_checkbox.isChecked()
         if ip_adapter_enable is True:
-            self.queue_color: str = "#370051"
             ip_adapter_image = self.ipadapter_image_label.input_image
         else:
             ip_adapter_image = None
         controlnet_enable = self.controlnet_image_label.enable_checkbox.isChecked()
         if controlnet_enable is True:
-            self.queue_color: str = "#40005f"
             controlnet_image = self.controlnet_image_label.input_image
         else:
             controlnet_image = None
@@ -163,35 +158,65 @@ class SdxlTab(QWidget):
         danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
 
         try:
-            request = SDXLRequest(avernus_client=self.avernus_client,
-                                  gallery=self.gallery,
-                                  tabs=self.tabs,
-                                  prompt=prompt,
-                                  negative_prompt=negative_prompt,
-                                  width=width,
-                                  height=height,
-                                  steps=steps,
-                                  batch_size=batch_size,
-                                  guidance_scale=guidance_scale,
-                                  lora_name=lora_name,
-                                  strength=strength,
-                                  ip_adapter_strength=ip_adapter_strength,
-                                  controlnet_strength=controlnet_strength,
-                                  controlnet_processor=controlnet_processor,
-                                  i2i_image_enabled=i2i_image_enable,
-                                  i2i_image=i2i_image,
-                                  ip_adapter_enabled=ip_adapter_enable,
-                                  ip_adapter_image=ip_adapter_image,
-                                  controlnet_enabled=controlnet_enable,
-                                  controlnet_image=controlnet_image,
-                                  enhance_prompt=enhance_prompt,
-                                  add_artist=add_artist,
-                                  add_danbooru_tags=add_danbooru_tags,
-                                  danbooru_tags_amount=danbooru_tags_amount,
-                                  model_name=model_name,
-                                  scheduler=scheduler,
-                                  seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            if i2i_image_enable is True:
+                request = SDXLI2IRequest(avernus_client=self.avernus_client,
+                                         gallery=self.gallery,
+                                         tabs=self.tabs,
+                                         prompt=prompt,
+                                         negative_prompt=negative_prompt,
+                                         width=width,
+                                         height=height,
+                                         steps=steps,
+                                         batch_size=batch_size,
+                                         guidance_scale=guidance_scale,
+                                         lora_name=lora_name,
+                                         strength=strength,
+                                         ip_adapter_strength=ip_adapter_strength,
+                                         controlnet_strength=controlnet_strength,
+                                         controlnet_processor=controlnet_processor,
+                                         i2i_image_enabled=i2i_image_enable,
+                                         i2i_image=i2i_image,
+                                         ip_adapter_enabled=ip_adapter_enable,
+                                         ip_adapter_image=ip_adapter_image,
+                                         controlnet_enabled=controlnet_enable,
+                                         controlnet_image=controlnet_image,
+                                         enhance_prompt=enhance_prompt,
+                                         add_artist=add_artist,
+                                         add_danbooru_tags=add_danbooru_tags,
+                                         danbooru_tags_amount=danbooru_tags_amount,
+                                         model_name=model_name,
+                                         scheduler=scheduler,
+                                         seed=seed)
+            else:
+                request = SDXLRequest(avernus_client=self.avernus_client,
+                                      gallery=self.gallery,
+                                      tabs=self.tabs,
+                                      prompt=prompt,
+                                      negative_prompt=negative_prompt,
+                                      width=width,
+                                      height=height,
+                                      steps=steps,
+                                      batch_size=batch_size,
+                                      guidance_scale=guidance_scale,
+                                      lora_name=lora_name,
+                                      strength=strength,
+                                      ip_adapter_strength=ip_adapter_strength,
+                                      controlnet_strength=controlnet_strength,
+                                      controlnet_processor=controlnet_processor,
+                                      i2i_image_enabled=i2i_image_enable,
+                                      i2i_image=i2i_image,
+                                      ip_adapter_enabled=ip_adapter_enable,
+                                      ip_adapter_image=ip_adapter_image,
+                                      controlnet_enabled=controlnet_enable,
+                                      controlnet_image=controlnet_image,
+                                      enhance_prompt=enhance_prompt,
+                                      add_artist=add_artist,
+                                      add_danbooru_tags=add_danbooru_tags,
+                                      danbooru_tags_amount=danbooru_tags_amount,
+                                      model_name=model_name,
+                                      scheduler=scheduler,
+                                      seed=seed)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -365,3 +390,17 @@ class SDXLRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+class SDXLI2IRequest(SDXLRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 guidance_scale: str, strength: float, ip_adapter_strength: float, controlnet_strength: float,
+                 controlnet_processor: str, i2i_image_enabled: bool, i2i_image: QPixmap, ip_adapter_enabled: bool,
+                 ip_adapter_image: QPixmap, controlnet_enabled: bool, controlnet_image: QPixmap, enhance_prompt: bool,
+                 model_name: str, scheduler: str, seed: str, add_artist: bool, add_danbooru_tags: bool,
+                 danbooru_tags_amount: int):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, guidance_scale, strength, ip_adapter_strength, controlnet_strength,
+                         controlnet_processor, i2i_image_enabled, i2i_image, ip_adapter_enabled, ip_adapter_image,
+                         controlnet_enabled, controlnet_image, enhance_prompt, model_name, scheduler, seed, add_artist,
+                         add_danbooru_tags, danbooru_tags_amount)

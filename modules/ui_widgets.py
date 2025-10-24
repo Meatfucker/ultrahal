@@ -18,6 +18,8 @@ from PySide6.QtCore import Qt, QSize, QSizeF, QUrl, QMimeData, Signal, QRectF, Q
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 
+from modules.utils import get_model_color
+
 class CheckableComboBox(QComboBox):
     """A QComboBox with checkable items for multi-selection."""
     selectionChanged = Signal(list)
@@ -1326,7 +1328,8 @@ class QueueViewer(QScrollArea):
         self.main_layout.addLayout(self.queue_layout, stretch=10)
         self.main_layout.addWidget(self.clear_queue_button)
 
-    def add_queue_item(self, queue_item, queue_view, hex_color):
+    def add_queue_item(self, queue_item, queue_view):
+        hex_color = get_model_color(queue_item.__class__.__name__)
         queue_widget = QueueObjectWidget(queue_item, hex_color, queue_view)
         self.queue_layout.addWidget(queue_widget)
         return queue_widget

@@ -16,7 +16,6 @@ class LlmTab(QWidget):
         self.tabs: VerticalTabWidget = tabs
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#4c493d"
 
         self.text_input = QTextEdit(acceptRichText=False)
         self.history_viewer = LLMHistoryWidget(self)
@@ -52,22 +51,20 @@ class LlmTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#4c493d"
         input_text = self.text_input.toPlainText()
         model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRequest(self.avernus_client, self, input_text, model_name)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
 
     @asyncSlot()
     async def on_reroll(self, input_text, history):
-        self.queue_color: str = "#666152"
         model_name = self.model_picker.model_list_picker.currentText()
         request = LLMRerollRequest(self.avernus_client, self, input_text, model_name, history)
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()

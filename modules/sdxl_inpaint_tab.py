@@ -28,7 +28,6 @@ class SdxlInpaintTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#6b1a93"
 
         self.paint_area = PainterWidget()
 
@@ -153,7 +152,7 @@ class SdxlInpaintTab(QWidget):
                                          model_name=model_name,
                                          scheduler=scheduler,
                                          seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()

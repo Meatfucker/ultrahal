@@ -26,7 +26,6 @@ class QwenEditPlusTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#004900"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -152,7 +151,7 @@ class QwenEditPlusTab(QWidget):
                                           add_danbooru_tags=add_danbooru_tags,
                                           danbooru_tags_amount=danbooru_tags_amount,
                                           nunchaku_enabled=nunchaku_enabled)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()

@@ -25,7 +25,6 @@ class FramepackTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#004031"
 
         self.first_frame_label = ImageInputBox(self, "First Frame", "assets/chili.png")
         self.last_frame_label = ImageInputBox(self, "Last Frame", "assets/chili.png")
@@ -76,7 +75,6 @@ class FramepackTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#210000"
         model_name = self.model_picker.model_list_picker.currentText()
         prompt = self.prompt_input.input.toPlainText()
         negative_prompt = self.negative_prompt_input.input.toPlainText()
@@ -116,7 +114,7 @@ class FramepackTab(QWidget):
                                    enhance_prompt=enhance_prompt,
                                    model_name=model_name)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, "#443366")
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()

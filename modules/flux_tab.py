@@ -27,7 +27,6 @@ class FluxTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#002f39"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -114,7 +113,6 @@ class FluxTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#002f39"
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
@@ -136,7 +134,6 @@ class FluxTab(QWidget):
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
             i2i_image = self.i2i_image_label.input_image
-            self.queue_color = "#004f5f"
         else:
             i2i_image = None
         ip_adapter_enable = self.ipadapter_image_label.enable_checkbox.isChecked()
@@ -147,7 +144,6 @@ class FluxTab(QWidget):
         kontext_enable = self.kontext_image_label.enable_checkbox.isChecked()
         if kontext_enable is True:
             kontext_image = self.kontext_image_label.input_image
-            self.queue_color ="#006f85"
         else:
             kontext_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
@@ -156,33 +152,88 @@ class FluxTab(QWidget):
         danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
 
         try:
-            request = FluxRequest(avernus_client=self.avernus_client,
-                                  gallery=self.gallery,
-                                  tabs=self.tabs,
-                                  prompt=prompt,
-                                  negative_prompt=negative_prompt,
-                                  width=width,
-                                  height=height,
-                                  steps=steps,
-                                  batch_size=batch_size,
-                                  lora_name=lora_name,
-                                  strength=strength,
-                                  ip_adapter_strength=ip_adapter_strength,
-                                  i2i_image_enabled=i2i_image_enable,
-                                  i2i_image=i2i_image,
-                                  ip_adapter_enabled=ip_adapter_enable,
-                                  ip_adapter_image=ip_adapter_image,
-                                  kontext_enabled=kontext_enable,
-                                  kontext_image=kontext_image,
-                                  enhance_prompt=enhance_prompt,
-                                  guidance_scale=guidance_scale,
-                                  true_cfg_scale=true_cfg_scale,
-                                  seed=seed,
-                                  add_artist=add_artist,
-                                  add_danbooru_tags=add_danbooru_tags,
-                                  danbooru_tags_amount=danbooru_tags_amount,
-                                  model_name=model_name)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            if i2i_image_enable is True:
+                request = FluxI2IRequest(avernus_client=self.avernus_client,
+                                         gallery=self.gallery,
+                                         tabs=self.tabs,
+                                         prompt=prompt,
+                                         negative_prompt=negative_prompt,
+                                         width=width,
+                                         height=height,
+                                         steps=steps,
+                                         batch_size=batch_size,
+                                         lora_name=lora_name,
+                                         strength=strength,
+                                         ip_adapter_strength=ip_adapter_strength,
+                                         i2i_image_enabled=i2i_image_enable,
+                                         i2i_image=i2i_image,
+                                         ip_adapter_enabled=ip_adapter_enable,
+                                         ip_adapter_image=ip_adapter_image,
+                                         kontext_enabled=kontext_enable,
+                                         kontext_image=kontext_image,
+                                         enhance_prompt=enhance_prompt,
+                                         guidance_scale=guidance_scale,
+                                         true_cfg_scale=true_cfg_scale,
+                                         seed=seed,
+                                         add_artist=add_artist,
+                                         add_danbooru_tags=add_danbooru_tags,
+                                         danbooru_tags_amount=danbooru_tags_amount,
+                                         model_name=model_name)
+            elif kontext_enable is True:
+                request = FluxKontextRequest(avernus_client=self.avernus_client,
+                                             gallery=self.gallery,
+                                             tabs=self.tabs,
+                                             prompt=prompt,
+                                             negative_prompt=negative_prompt,
+                                             width=width,
+                                             height=height,
+                                             steps=steps,
+                                             batch_size=batch_size,
+                                             lora_name=lora_name,
+                                             strength=strength,
+                                             ip_adapter_strength=ip_adapter_strength,
+                                             i2i_image_enabled=i2i_image_enable,
+                                             i2i_image=i2i_image,
+                                             ip_adapter_enabled=ip_adapter_enable,
+                                             ip_adapter_image=ip_adapter_image,
+                                             kontext_enabled=kontext_enable,
+                                             kontext_image=kontext_image,
+                                             enhance_prompt=enhance_prompt,
+                                             guidance_scale=guidance_scale,
+                                             true_cfg_scale=true_cfg_scale,
+                                             seed=seed,
+                                             add_artist=add_artist,
+                                             add_danbooru_tags=add_danbooru_tags,
+                                             danbooru_tags_amount=danbooru_tags_amount,
+                                             model_name=model_name)
+            else:
+                request = FluxRequest(avernus_client=self.avernus_client,
+                                      gallery=self.gallery,
+                                      tabs=self.tabs,
+                                      prompt=prompt,
+                                      negative_prompt=negative_prompt,
+                                      width=width,
+                                      height=height,
+                                      steps=steps,
+                                      batch_size=batch_size,
+                                      lora_name=lora_name,
+                                      strength=strength,
+                                      ip_adapter_strength=ip_adapter_strength,
+                                      i2i_image_enabled=i2i_image_enable,
+                                      i2i_image=i2i_image,
+                                      ip_adapter_enabled=ip_adapter_enable,
+                                      ip_adapter_image=ip_adapter_image,
+                                      kontext_enabled=kontext_enable,
+                                      kontext_image=kontext_image,
+                                      enhance_prompt=enhance_prompt,
+                                      guidance_scale=guidance_scale,
+                                      true_cfg_scale=true_cfg_scale,
+                                      seed=seed,
+                                      add_artist=add_artist,
+                                      add_danbooru_tags=add_danbooru_tags,
+                                      danbooru_tags_amount=danbooru_tags_amount,
+                                      model_name=model_name)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -358,3 +409,28 @@ class FluxRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+class FluxI2IRequest(FluxRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 strength: float, ip_adapter_strength: float, i2i_image_enabled: bool, guidance_scale: str,
+                 true_cfg_scale: str, seed: str, i2i_image: QPixmap, ip_adapter_enabled: bool,
+                 ip_adapter_image: QPixmap, kontext_enabled: bool, kontext_image: QPixmap, enhance_prompt: bool,
+                 add_artist: bool, add_danbooru_tags: bool, danbooru_tags_amount: int, model_name: str):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, strength, ip_adapter_strength, i2i_image_enabled, guidance_scale, true_cfg_scale,
+                         seed, i2i_image, ip_adapter_enabled, ip_adapter_image, kontext_enabled, kontext_image,
+                         enhance_prompt, add_artist, add_danbooru_tags, danbooru_tags_amount, model_name)
+
+class FluxKontextRequest(FluxRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 strength: float, ip_adapter_strength: float, i2i_image_enabled: bool, guidance_scale: str,
+                 true_cfg_scale: str, seed: str, i2i_image: QPixmap, ip_adapter_enabled: bool,
+                 ip_adapter_image: QPixmap, kontext_enabled: bool, kontext_image: QPixmap, enhance_prompt: bool,
+                 add_artist: bool, add_danbooru_tags: bool, danbooru_tags_amount: int, model_name: str):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, strength, ip_adapter_strength, i2i_image_enabled, guidance_scale, true_cfg_scale,
+                         seed, i2i_image, ip_adapter_enabled, ip_adapter_image, kontext_enabled, kontext_image,
+                         enhance_prompt, add_artist, add_danbooru_tags, danbooru_tags_amount, model_name)
+

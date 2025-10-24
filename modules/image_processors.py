@@ -25,7 +25,6 @@ class ImageProcessorTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#000000"
 
         self.processor_selector = QComboBox()
         processor_list = ["RealESRGAN",
@@ -73,7 +72,6 @@ class RealESRGANConfig(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#000000"
         self.input_image = image_input
 
         self.scale_input = SingleLineInputBox("Scale", placeholder_text="4")
@@ -92,14 +90,13 @@ class RealESRGANConfig(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#000000"
         if self.scale_input.input.text() != "":
             scale = int(self.scale_input.input.text())
         else:
             scale = 4
         request = RealESRGANRequest(self.avernus_client, self.gallery, self.tabs, self.input_image.input_image, scale)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
@@ -117,7 +114,6 @@ class Swin2SRConfig(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#000000"
         self.input_image = image_input
 
         self.submit_button = QPushButton("Submit")
@@ -134,10 +130,9 @@ class Swin2SRConfig(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#000000"
         request = Swin2SRRequest(self.avernus_client, self.gallery, self.tabs, self.input_image.input_image)
 
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()

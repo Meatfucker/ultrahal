@@ -25,7 +25,6 @@ class QwenTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#001000"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -106,7 +105,6 @@ class QwenTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#001000"
         prompt = self.prompt_label.input.toPlainText()
         negative_prompt = self.negative_prompt_label.input.toPlainText()
         width = self.resolution_widget.width_label.input.text()
@@ -124,13 +122,11 @@ class QwenTab(QWidget):
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
-            self.queue_color: str = "#002000"
             i2i_image = self.i2i_image_label.input_image
         else:
             i2i_image = None
         edit_enable = self.edit_image_label.enable_checkbox.isChecked()
         if edit_enable is True:
-            self.queue_color: str = "#003000"
             edit_image = self.edit_image_label.input_image
         else:
             edit_image = None
@@ -141,29 +137,76 @@ class QwenTab(QWidget):
         nunchaku_enabled = self.enable_nunchaku_checkbox.isChecked()
 
         try:
-            request = QwenRequest(avernus_client=self.avernus_client,
-                                  gallery=self.gallery,
-                                  tabs=self.tabs,
-                                  prompt=prompt,
-                                  negative_prompt=negative_prompt,
-                                  width=width,
-                                  height=height,
-                                  steps=steps,
-                                  batch_size=batch_size,
-                                  lora_name=lora_name,
-                                  strength=strength,
-                                  i2i_image_enabled=i2i_image_enable,
-                                  i2i_image=i2i_image,
-                                  edit_enabled=edit_enable,
-                                  edit_image=edit_image,
-                                  enhance_prompt=enhance_prompt,
-                                  true_cfg_scale=true_cfg_scale,
-                                  seed=seed,
-                                  add_artist=add_artist,
-                                  add_danbooru_tags=add_danbooru_tags,
-                                  danbooru_tags_amount=danbooru_tags_amount,
-                                  nunchaku_enabled=nunchaku_enabled)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            if i2i_image_enable is True:
+                request = QwenI2IRequest(avernus_client=self.avernus_client,
+                                         gallery=self.gallery,
+                                         tabs=self.tabs,
+                                         prompt=prompt,
+                                         negative_prompt=negative_prompt,
+                                         width=width,
+                                         height=height,
+                                         steps=steps,
+                                         batch_size=batch_size,
+                                         lora_name=lora_name,
+                                         strength=strength,
+                                         i2i_image_enabled=i2i_image_enable,
+                                         i2i_image=i2i_image,
+                                         edit_enabled=edit_enable,
+                                         edit_image=edit_image,
+                                         enhance_prompt=enhance_prompt,
+                                         true_cfg_scale=true_cfg_scale,
+                                         seed=seed,
+                                         add_artist=add_artist,
+                                         add_danbooru_tags=add_danbooru_tags,
+                                         danbooru_tags_amount=danbooru_tags_amount,
+                                         nunchaku_enabled=nunchaku_enabled)
+            elif edit_enable is True:
+                request = QwenEditRequest(avernus_client=self.avernus_client,
+                                          gallery=self.gallery,
+                                          tabs=self.tabs,
+                                          prompt=prompt,
+                                          negative_prompt=negative_prompt,
+                                          width=width,
+                                          height=height,
+                                          steps=steps,
+                                          batch_size=batch_size,
+                                          lora_name=lora_name,
+                                          strength=strength,
+                                          i2i_image_enabled=i2i_image_enable,
+                                          i2i_image=i2i_image,
+                                          edit_enabled=edit_enable,
+                                          edit_image=edit_image,
+                                          enhance_prompt=enhance_prompt,
+                                          true_cfg_scale=true_cfg_scale,
+                                          seed=seed,
+                                          add_artist=add_artist,
+                                          add_danbooru_tags=add_danbooru_tags,
+                                          danbooru_tags_amount=danbooru_tags_amount,
+                                          nunchaku_enabled=nunchaku_enabled)
+            else:
+                request = QwenRequest(avernus_client=self.avernus_client,
+                                      gallery=self.gallery,
+                                      tabs=self.tabs,
+                                      prompt=prompt,
+                                      negative_prompt=negative_prompt,
+                                      width=width,
+                                      height=height,
+                                      steps=steps,
+                                      batch_size=batch_size,
+                                      lora_name=lora_name,
+                                      strength=strength,
+                                      i2i_image_enabled=i2i_image_enable,
+                                      i2i_image=i2i_image,
+                                      edit_enabled=edit_enable,
+                                      edit_image=edit_image,
+                                      enhance_prompt=enhance_prompt,
+                                      true_cfg_scale=true_cfg_scale,
+                                      seed=seed,
+                                      add_artist=add_artist,
+                                      add_danbooru_tags=add_danbooru_tags,
+                                      danbooru_tags_amount=danbooru_tags_amount,
+                                      nunchaku_enabled=nunchaku_enabled)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -326,3 +369,25 @@ class QwenRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+class QwenI2IRequest(QwenRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 strength: float, i2i_image_enabled: bool, true_cfg_scale: str, seed: str, i2i_image: QPixmap,
+                 edit_enabled: bool, edit_image: QPixmap, enhance_prompt: bool, add_artist: bool,
+                 add_danbooru_tags: bool, danbooru_tags_amount: int, nunchaku_enabled: bool):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, strength, i2i_image_enabled, true_cfg_scale, seed, i2i_image, edit_enabled,
+                         edit_image, enhance_prompt, add_artist, add_danbooru_tags, danbooru_tags_amount,
+                         nunchaku_enabled)
+
+class QwenEditRequest(QwenRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 strength: float, i2i_image_enabled: bool, true_cfg_scale: str, seed: str, i2i_image: QPixmap,
+                 edit_enabled: bool, edit_image: QPixmap, enhance_prompt: bool, add_artist: bool,
+                 add_danbooru_tags: bool, danbooru_tags_amount: int, nunchaku_enabled: bool):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, strength, i2i_image_enabled, true_cfg_scale, seed, i2i_image, edit_enabled,
+                         edit_image, enhance_prompt, add_artist, add_danbooru_tags, danbooru_tags_amount,
+                         nunchaku_enabled)

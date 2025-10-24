@@ -1,10 +1,77 @@
 import base64
+import colorsys
 import csv
 import io
 import json
 import random
+
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from PIL import Image
 
+
+def lighten_color(hex_color, amount=0.5):
+    """Lighten a given hex color by a given amount (0–1)."""
+    hex_color = hex_color.lstrip('#')
+    r, g, b = [int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    l = max(0, min(1, l * amount))
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    return '#{:02x}{:02x}{:02x}'.format(int(r * 255), int(g * 255), int(b * 255))
+
+def generate_distinct_colors(n):
+    """Generate n visually distinct hex colors around the HSV color wheel."""
+    colors = []
+    for i in range(n):
+        hue = i / n
+        r, g, b = colorsys.hsv_to_rgb(hue, 0.65, 0.3)  # S=0.65, V=0.5 for darker base
+        colors.append('#{:02x}{:02x}{:02x}'.format(int(r*255), int(g*255), int(b*255)))
+    return colors
+
+
+def build_palette():
+    """Build a dictionary of model → color based on built-in model types."""
+    model_map = {
+        "Ace": ["ACERequest"],
+        "AuraFlow": ["AuraFlowRequest"],
+        "Chroma": ["ChromaRequest", "ChromaI2IRequest"],
+        "Flux": ["FluxRequest", "FluxI2IRequest", "FluxKontextRequest", "FluxInpaintRequest", "FluxFillRequest"],
+        "Framepack": ["FramepackRequest"],
+        "HiDream": ["HiDreamRequest"],
+        "Hunyuan Video": ["HunyuanVideoRequest"],
+        "Processors": ["RealESRGANRequest", "Swin2SRRequest"],
+        "Kandinsky5": ["Kandinsky5Request"],
+        "LLM": ["LLMRequest"],
+        "Lumina 2": ["Lumina2Request"],
+        "Qwen Image": ["QwenRequest", "QwenI2IRequest", "QwenEditRequest", "QwenInpaintRequest", "QwenEditPlusRequest"],
+        "Sana Sprint": ["SanaSprintRequest", "SanaSprintI2IRequest"],
+        "SD 1.5": ["SD15Request", "SD15I2IRequest", "SD15InpaintRequest"],
+        "SDXL": ["SDXLRequest", "SDXLI2IRequest", "SDXLInpaintRequest"],
+        "Wan": ["WanRequest", "WanV2VRequest", "WanVACERequest"]
+    }
+    types = list(model_map.keys())
+    base_colors = generate_distinct_colors(len(types))
+    palette = {}
+
+    for i, model_type in enumerate(types):
+        base_color = base_colors[i]
+        models = model_map[model_type]
+
+        if len(models) == 1:
+            palette[models[0]] = base_color
+        else:
+            for j, model in enumerate(models):
+                # Gradually lighten
+                lighten_factor = 1 + (j / (len(models) * 1.2))
+                variant = lighten_color(base_color, lighten_factor)
+                palette[model] = variant
+    return palette
+
+MODEL_COLOR_PALETTE = build_palette()
+
+def get_model_color(model_name):
+    """Return a hex color for the given model name."""
+    return MODEL_COLOR_PALETTE.get(model_name, "#808080")
 
 async def base64_to_images(base64_images):
     """Converts a list of base64 images into a list of file-like objects."""

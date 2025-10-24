@@ -27,7 +27,6 @@ class FluxFillTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#1aa8c5"
 
         self.paint_area = PainterWidget()
 
@@ -145,7 +144,7 @@ class FluxFillTab(QWidget):
                                       seed=seed,
                                       outpainting_pixels=outpainting_pixels,
                                       outpainting_direction=outpainting_direction)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()

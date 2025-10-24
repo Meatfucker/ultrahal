@@ -26,7 +26,6 @@ class WanTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#190000"
 
         self.i2v_image_label = ImageInputBox(self, "i2v", "assets/chili.png")
         self.v2v_video_label = VideoInputWidget("v2v")
@@ -78,7 +77,6 @@ class WanTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#190000"
         model_name_t2v = self.model_picker_t2v.model_list_picker.currentText()
         model_name_i2v = self.model_picker_i2v.model_list_picker.currentText()
         model_name_v2v = self.model_picker_v2v.model_list_picker.currentText()
@@ -98,7 +96,6 @@ class WanTab(QWidget):
             if i2v_image_enable is True:
                 i2v_image = self.i2v_image_label.input_image
                 model_name = model_name_i2v
-                self.queue_color: str = "#2a0000"
             else:
                 i2v_image = None
                 model_name = model_name_t2v
@@ -120,9 +117,8 @@ class WanTab(QWidget):
                                  model_name=model_name,
                                  enhance_prompt=enhance_prompt,
                                  )
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
         else:
-            self.queue_color: str = "#420000"
             request = WanV2VRequest(avernus_client=self.avernus_client,
                                     gallery=self.gallery,
                                     tabs=self.tabs,
@@ -137,7 +133,7 @@ class WanTab(QWidget):
                                     video=self.v2v_video_label.file_path,
                                     model_name=model_name_v2v,
                                     enhance_prompt=enhance_prompt,)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
 
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)

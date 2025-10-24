@@ -27,7 +27,6 @@ class ChromaTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#12001b"
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -96,7 +95,6 @@ class ChromaTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#190019"
         added_prompts = self.prompt_picker.get_selected_items()
         prompt = self.prompt_label.input.toPlainText()
         for added_prompt in added_prompts:
@@ -122,7 +120,6 @@ class ChromaTab(QWidget):
         strength = round(float(self.i2i_strength_label.slider.value() * 0.01), 2)
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
-            self.queue_color: str = "#1f001f"
             i2i_image = self.i2i_image_label.input_image
         else:
             i2i_image = None
@@ -132,27 +129,49 @@ class ChromaTab(QWidget):
         danbooru_tags_amount = int(self.danbooru_tags_slider.slider.value())
 
         try:
-            request = ChromaRequest(avernus_client=self.avernus_client,
-                                    gallery=self.gallery,
-                                    tabs=self.tabs,
-                                    prompt=prompt,
-                                    negative_prompt=negative_prompt,
-                                    width=width,
-                                    height=height,
-                                    steps=steps,
-                                    batch_size=batch_size,
-                                    guidance_scale=guidance_scale,
-                                    lora_name=lora_name,
-                                    strength=strength,
-                                    i2i_image_enabled=i2i_image_enable,
-                                    i2i_image=i2i_image,
-                                    enhance_prompt=enhance_prompt,
-                                    add_artist=add_artist,
-                                    add_danbooru_tags=add_danbooru_tags,
-                                    danbooru_tags_amount=danbooru_tags_amount,
-                                    model_name=model_name,
-                                    seed=seed)
-            queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
+            if i2i_image_enable is False:
+                request = ChromaRequest(avernus_client=self.avernus_client,
+                                        gallery=self.gallery,
+                                        tabs=self.tabs,
+                                        prompt=prompt,
+                                        negative_prompt=negative_prompt,
+                                        width=width,
+                                        height=height,
+                                        steps=steps,
+                                        batch_size=batch_size,
+                                        guidance_scale=guidance_scale,
+                                        lora_name=lora_name,
+                                        strength=strength,
+                                        i2i_image_enabled=i2i_image_enable,
+                                        i2i_image=i2i_image,
+                                        enhance_prompt=enhance_prompt,
+                                        add_artist=add_artist,
+                                        add_danbooru_tags=add_danbooru_tags,
+                                        danbooru_tags_amount=danbooru_tags_amount,
+                                        model_name=model_name,
+                                        seed=seed)
+            else:
+                request = ChromaI2IRequest(avernus_client=self.avernus_client,
+                                           gallery=self.gallery,
+                                           tabs=self.tabs,
+                                           prompt=prompt,
+                                           negative_prompt=negative_prompt,
+                                           width=width,
+                                           height=height,
+                                           steps=steps,
+                                           batch_size=batch_size,
+                                           guidance_scale=guidance_scale,
+                                           lora_name=lora_name,
+                                           strength=strength,
+                                           i2i_image_enabled=i2i_image_enable,
+                                           i2i_image=i2i_image,
+                                           enhance_prompt=enhance_prompt,
+                                           add_artist=add_artist,
+                                           add_danbooru_tags=add_danbooru_tags,
+                                           danbooru_tags_amount=danbooru_tags_amount,
+                                           model_name=model_name,
+                                           seed=seed)
+            queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
             self.tabs.parent().request_event.set()
@@ -280,3 +299,14 @@ class ChromaRequest:
         self.gallery.update()
         await asyncio.sleep(0)  # Let the event loop breathe
         QApplication.processEvents()
+
+class ChromaI2IRequest(ChromaRequest):
+    def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
+                 negative_prompt: str, width: str, height: str, steps: str, batch_size: str, lora_name: list,
+                 guidance_scale: str, strength: float, i2i_image_enabled: bool, i2i_image: QPixmap,
+                 enhance_prompt: bool, model_name: str, seed: str, add_artist: bool, add_danbooru_tags: bool,
+                 danbooru_tags_amount: int):
+        super().__init__(avernus_client, gallery, tabs, prompt, negative_prompt, width, height, steps, batch_size,
+                         lora_name, guidance_scale, strength, i2i_image_enabled, i2i_image, enhance_prompt, model_name,
+                         seed, add_artist, add_danbooru_tags, danbooru_tags_amount)
+

@@ -22,7 +22,6 @@ class HunyuanVideoTab(QWidget):
         self.gallery: ImageGallery = self.gallery_tab.gallery
         self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
-        self.queue_color: str = "#191000"
 
         self.prompt_input = ParagraphInputBox("Prompt")
         self.negative_prompt_input = ParagraphInputBox("Negative Prompt")
@@ -62,7 +61,6 @@ class HunyuanVideoTab(QWidget):
 
     @asyncSlot()
     async def on_submit(self):
-        self.queue_color: str = "#190000"
         model_name = self.model_picker.model_list_picker.currentText()
         prompt = self.prompt_input.input.toPlainText()
         negative_prompt = self.negative_prompt_input.input.toPlainText()
@@ -87,8 +85,7 @@ class HunyuanVideoTab(QWidget):
                                       seed=seed,
                                       enhance_prompt=enhance_prompt,
                                       model_name=model_name)
-        queue_item = self.queue_view.add_queue_item(request, self.queue_view, self.queue_color)
-
+        queue_item = self.queue_view.add_queue_item(request, self.queue_view)
 
         request.ui_item = queue_item
         self.tabs.parent().pending_requests.append(request)

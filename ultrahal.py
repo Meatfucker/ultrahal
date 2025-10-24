@@ -9,6 +9,7 @@ from qasync import QEventLoop, asyncSlot
 
 from modules.ui_widgets import CircleWidget, VerticalTabWidget
 from modules.ace_tab import ACETab
+from modules.auraflow_tab import AuraFlowTab
 from modules.avernus_client import AvernusClient
 from modules.chroma_tab import ChromaTab
 from modules.flux_fill_tab import FluxFillTab
@@ -21,6 +22,7 @@ from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
 from modules.kandinsky5_tab import Kandinsky5Tab
 from modules.llm_tab import LlmTab
+from modules.lumina2_tab import Lumina2Tab
 from modules.sana_sprint_tab import SanaSprintTab
 from modules.sd15_tab import SD15Tab
 from modules.sd15_inpaint_tab import SD15InpaintTab
@@ -68,6 +70,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.queue_tab, "Queue")
 
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
+        self.auraflow_tab = AuraFlowTab(self.avernus_client, self.tabs)
         self.chroma_tab = ChromaTab(self.avernus_client, self.tabs)
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
@@ -78,6 +81,7 @@ class MainWindow(QWidget):
         self.image_processor_tab = ImageProcessorTab(self.avernus_client, self.tabs)
         self.kandinsky5_tab = Kandinsky5Tab(self.avernus_client, self.tabs)
         self.llm_chat_tab = LlmTab(self.avernus_client, self.tabs)
+        self.lumina2_tab = Lumina2Tab(self.avernus_client, self.tabs)
         self.qwen_tab = QwenTab(self.avernus_client, self.tabs)
         self.qwen_inpaint_tab = QwenImageInpaintTab(self.avernus_client, self.tabs)
         self.qwen_edit_tab = QwenEditPlusTab(self.avernus_client, self.tabs)
@@ -90,6 +94,7 @@ class MainWindow(QWidget):
         self.wan_vace_tab = WanVACETab(self.avernus_client, self.tabs)
 
         self.tabs.addTab(self.ace_tab, "ACE")
+        self.tabs.addTab(self.auraflow_tab, "AuraFlow")
         self.tabs.addTab(self.chroma_tab, "Chroma")
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
@@ -99,6 +104,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.hunyuan_video_tab, "Hunyuan Video")
         self.tabs.addTab(self.kandinsky5_tab, "Kandinsky5")
         self.tabs.addTab(self.llm_chat_tab, "LLM")
+        self.tabs.addTab(self.lumina2_tab, "Lumina 2")
         self.tabs.addTab(self.image_processor_tab, "Processors")
         self.tabs.addTab(self.qwen_tab, "Qwen")
         self.tabs.addTab(self.qwen_inpaint_tab, "Qwen Inpaint")
