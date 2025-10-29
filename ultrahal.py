@@ -17,6 +17,9 @@ from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
 from modules.framepack_tab import FramepackTab
 from modules.gallery import GalleryTab
+
+#from modules.grid_gallery import GridGalleryTab
+
 from modules.hidream import HiDreamTab
 from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
@@ -65,8 +68,10 @@ class MainWindow(QWidget):
         self.tabs = VerticalTabWidget()
 
         self.gallery_tab = GalleryTab(self.avernus_client, self)
+        #self.grid_gallery_Tab = GridGalleryTab(self.avernus_client, self)
         self.queue_tab = QueueTab(self.avernus_client, self)
         self.tabs.addTab(self.gallery_tab, "Gallery")
+        #self.tabs.addTab(self.grid_gallery_Tab, "Grid Gallery")
         self.tabs.addTab(self.queue_tab, "Queue")
 
         self.ace_tab = ACETab(self.avernus_client, self.tabs)

@@ -23,9 +23,9 @@ class FluxInpaintTab(QWidget):
         super().__init__()
         self.avernus_client: AvernusClient = avernus_client
         self.tabs: VerticalTabWidget = tabs
-        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.widget(0))
+        self.gallery_tab: GalleryTab = cast(GalleryTab, self.tabs.named_widget("Gallery"))
         self.gallery: ImageGallery = self.gallery_tab.gallery
-        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.widget(1))
+        self.queue_tab: QueueTab = cast(QueueTab, self.tabs.named_widget("Queue"))
         self.queue_view: QueueViewer = self.queue_tab.queue_view
 
         self.paint_area = PainterWidget()

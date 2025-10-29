@@ -524,6 +524,27 @@ class ImageGallery(QVBoxLayout):
         self.gallery.tile_images()
         self.update()
 
+class ImageGalleryGrid(QGridLayout):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.column_slider = HorizontalSlider("Gallery Columns", 1, 10, 4, 1)
+        self.clear_gallery_button = QPushButton("Clear Gallery")
+        self.clear_gallery_button.clicked.connect(self.clear_gallery)
+        self.gallery = ImageGalleryViewer(self, self.parent)
+        self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
+
+        config_layout = QHBoxLayout()
+        config_layout.addLayout(self.column_slider)
+        config_layout.addWidget(self.clear_gallery_button)
+        self.addLayout(config_layout, 0, 0)
+        self.addWidget(self.gallery, 1, 0,)
+
+    def clear_gallery(self):
+        self.gallery.gallery.clear()
+        self.gallery.tile_images()
+        self.update()
+
 
 class ImageGalleryViewer(QGraphicsView):
     def __init__(self, top_layout, parent):
