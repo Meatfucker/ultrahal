@@ -226,22 +226,31 @@ class SdxlTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        loras = await self.avernus_client.list_sdxl_loras()
-        self.lora_list.insertItems(0, loras)
+        response = await self.avernus_client.list_sdxl_loras()
+        if response["status"] is True:
+            self.lora_list.insertItems(0, response["loras"])
+        else:
+            self.lora_list.insertItems(0, ["NONE"])
 
     @asyncSlot()
     async def make_controlnet_list(self):
         self.controlnet_list.clear()
-        controlnets = await self.avernus_client.list_sdxl_controlnets()
-        for controlnet in controlnets:
-            self.controlnet_list.addItem(controlnet)
+        response = await self.avernus_client.list_sdxl_controlnets()
+        if response["status"] is True:
+            for controlnet in response["sdxl_controlnets"]:
+                self.controlnet_list.addItem(controlnet)
+        else:
+            self.controlnet_list.addItem("None")
 
     @asyncSlot()
     async def make_scheduler_list(self):
         self.scheduler_list.clear()
-        schedulers = await self.avernus_client.list_sdxl_schedulers()
-        for scheduler in schedulers:
-            self.scheduler_list.addItem(scheduler)
+        response = await self.avernus_client.list_sdxl_schedulers()
+        if response["status"] is True:
+            for scheduler in response["schedulers"]:
+                self.scheduler_list.addItem(scheduler)
+        else:
+            self.scheduler_list.addItem("NONE")
 
 
 class SDXLRequest:
@@ -277,6 +286,7 @@ class SDXLRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
@@ -317,7 +327,7 @@ class SDXLRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
 
@@ -373,10 +383,16 @@ class SDXLRequest:
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 
         try:
-            base64_images = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
-            images = await base64_to_images(base64_images)
-            await self.display_images(images)
+            response = await self.avernus_client.sdxl_image(self.enhanced_prompt, **kwargs)
+            if response["status"] == "True" or response["status"] == True:
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
         except Exception as e:
+            self.status = "Failed"
             print(f"SDXL REQUEST EXCEPTION: {e}")
 
     @asyncSlot()

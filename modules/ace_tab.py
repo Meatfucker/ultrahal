@@ -109,6 +109,7 @@ class ACERequest:
         self.avernus_client: AvernusClient = avernus_client
         self.gallery: ImageGallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt: str = prompt
         self.lyrics: str = lyrics
         self.length: str = length
@@ -125,7 +126,7 @@ class ACERequest:
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
         elapsed_time = time.time() - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
@@ -139,9 +140,16 @@ class ACERequest:
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.omega_scale != "": kwargs["omega_scale"] = float(self.omega_scale)
         if self.seed != "": kwargs["actual_seeds"] = int(self.seed)
-
-        response = await self.avernus_client.ace_music(**kwargs)
-        await self.display_audio(response)
+        try:
+            response = await self.avernus_client.ace_music(**kwargs)
+            if response["status"] == "True":
+                self.status = "Finished"
+                await self.display_audio(response["audio"])
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"ACE FAILURE: {e}")
 
     @asyncSlot()
     async def display_audio(self, response):

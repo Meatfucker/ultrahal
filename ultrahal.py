@@ -17,9 +17,6 @@ from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
 from modules.framepack_tab import FramepackTab
 from modules.gallery import GalleryTab
-
-#from modules.grid_gallery import GridGalleryTab
-
 from modules.hidream import HiDreamTab
 from modules.hunyuan_video_tab import HunyuanVideoTab
 from modules.image_processors import ImageProcessorTab
@@ -68,10 +65,8 @@ class MainWindow(QWidget):
         self.tabs = VerticalTabWidget()
 
         self.gallery_tab = GalleryTab(self.avernus_client, self)
-        #self.grid_gallery_Tab = GridGalleryTab(self.avernus_client, self)
         self.queue_tab = QueueTab(self.avernus_client, self)
         self.tabs.addTab(self.gallery_tab, "Gallery")
-        #self.tabs.addTab(self.grid_gallery_Tab, "Grid Gallery")
         self.tabs.addTab(self.queue_tab, "Queue")
 
         self.ace_tab = ACETab(self.avernus_client, self.tabs)
@@ -142,7 +137,7 @@ class MainWindow(QWidget):
         self.avernus_url = self.avernus_entry.text()
         self.avernus_port = int(self.avernus_port_entry.text())
         await self.avernus_client.update_url(self.avernus_url, self.avernus_port)
-        self.avernus_current_server.setText(f"Current Server: {self.avernus_url}")
+        self.avernus_current_server.setText(f"Server: {self.avernus_url}")
         print(f"Avernus URL Updated: {self.avernus_url}")
         await self.check_status()
         await self.update_lists()
@@ -166,7 +161,7 @@ class MainWindow(QWidget):
     @asyncSlot()
     async def check_status(self):
         status = await self.avernus_client.check_status()
-        if status.get("status") == "Ok!":
+        if status.get("status") == True:
             self.avernus_online_label.set_color(1)
         else:
             self.avernus_online_label.set_color(0)
@@ -187,7 +182,6 @@ class MainWindow(QWidget):
         await self.chroma_tab.make_lora_list()
         await self.sd15_tab.make_lora_list()
         await self.sd15_inpaint_tab.make_lora_list()
-
 
     def closeEvent(self, event):
         QApplication.quit()

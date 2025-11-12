@@ -1,4 +1,5 @@
 import asyncio
+import tempfile
 import time
 from typing import cast
 
@@ -110,6 +111,7 @@ class HunyuanVideoRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
@@ -130,7 +132,7 @@ class HunyuanVideoRequest:
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
         elapsed_time = time.time() - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
@@ -150,12 +152,24 @@ class HunyuanVideoRequest:
         if self.guidance_scale != "": kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
-        response = await self.avernus_client.hunyuan_ti2v(**kwargs)
-        await self.display_video(response)
+        try:
+            response = await self.avernus_client.hunyuan_ti2v(**kwargs)
+            if response["status"] == True or response["status"] == "True":
+                self.status = "Finished"
+                await self.display_video(response["video"])
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"HUNYUAN VIDEO EXCEPTION: {e}")
+
 
     @asyncSlot()
     async def display_video(self, response):
-        video_item = self.load_video_from_file(response)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        temp_file.write(response)
+        temp_file.close()
+        video_item = self.load_video_from_file(temp_file.name)
         self.gallery.gallery.add_item(video_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()

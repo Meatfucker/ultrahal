@@ -147,6 +147,7 @@ class RealESRGANRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tab
+        self.status = None
         self.prompt = "RealESRGAN"
         self.image = image
         self.scale = scale
@@ -160,7 +161,7 @@ class RealESRGANRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
@@ -168,9 +169,19 @@ class RealESRGANRequest:
         temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
         self.image.save(temp_file.name, quality=100)
         base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
-        base64_images = await self.avernus_client.realesrgan(image=base64_input, scale=self.scale)
-        images = await base64_to_images([base64_images])
-        await self.display_images(images)
+        try:
+            response = await self.avernus_client.realesrgan(image=base64_input, scale=self.scale)
+            if response["status"] == "True" or response["status"] == True:
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"REALESRGAN REQUEST EXCEPTION: {e}")
+
 
     @asyncSlot()
     async def display_images(self, images):
@@ -194,6 +205,7 @@ class Swin2SRRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tab
+        self.status = None
         self.prompt = "Swin2SR"
         self.image = image
         self.queue_info = None
@@ -206,7 +218,7 @@ class Swin2SRRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
@@ -214,9 +226,18 @@ class Swin2SRRequest:
         temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
         self.image.save(temp_file.name, quality=100)
         base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
-        base64_images = await self.avernus_client.swin2sr(image=base64_input)
-        images = await base64_to_images([base64_images])
-        await self.display_images(images)
+        try:
+            response = await self.avernus_client.swin2sr(image=base64_input)
+            if response["status"] == "True" or response["status"] == True:
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"SWIN2SR REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_images(self, images):

@@ -82,6 +82,7 @@ class LLMRequest:
                  model_name: str):
         self.avernus_client = avernus_client
         self.tab = tab
+        self.status = None
         self.prompt = input_text
         self.model_name = model_name
         self.queue_info = None
@@ -94,23 +95,31 @@ class LLMRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
         if self.model_name == "":
             self.model_name = "Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4"
         print(f"LLM: {self.prompt}, {self.model_name}")
-        if self.tab.history_viewer.get_history() is None:
-            response = await self.avernus_client.llm_chat(self.prompt, model_name=self.model_name)
-        else:
-            gen_history = self.tab.history_viewer.get_history()
-            response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
-        if isinstance(response, str):
-            await self.tab.add_history("user", self.prompt, "#303040")
-            await self.tab.add_history("assistant", response, "#303050")
-            self.tab.text_input.clear()
-            self.tab.submit_button.setDisabled(False)
+        try:
+            if self.tab.history_viewer.get_history() is None:
+                response = await self.avernus_client.llm_chat(self.prompt, model_name=self.model_name)
+            else:
+                gen_history = self.tab.history_viewer.get_history()
+                response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
+            if response["status"] == True or response["status"] == "True":
+                self.status = "Finished"
+                if isinstance(response["response"], str):
+                    await self.tab.add_history("user", self.prompt, "#303040")
+                    await self.tab.add_history("assistant", response["response"], "#303050")
+                    self.tab.text_input.clear()
+                    self.tab.submit_button.setDisabled(False)
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"LLM CHAT EXCEPTION: {e}")
 
 
 class LLMRerollRequest(LLMRequest):
@@ -127,13 +136,21 @@ class LLMRerollRequest(LLMRequest):
         if self.model_name == "":
             self.model_name = "Goekdeniz-Guelmez/Josiefied-Qwen2.5-14B-Instruct-abliterated-v4"
         print(f"LLM: {self.prompt}, {self.model_name}")
-        if self.tab.history_viewer.get_history() is None:
-            response = await self.avernus_client.llm_chat(self.prompt, model_name=self.model_name)
-        else:
-            gen_history = self.tab.history_viewer.get_history()
-            response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
-        if isinstance(response, str):
-            await self.tab.add_history("user", self.prompt, "#002200")
-            await self.tab.add_history("assistant", response, "#000022")
-            self.tab.text_input.clear()
-            self.tab.submit_button.setDisabled(False)
+        try:
+            if self.tab.history_viewer.get_history() is None:
+                response = await self.avernus_client.llm_chat(self.prompt, model_name=self.model_name)
+            else:
+                gen_history = self.tab.history_viewer.get_history()
+                response = await self.avernus_client.llm_chat(self.prompt, messages=gen_history, model_name=self.model_name)
+            if response["status"] == True or response["status"] == "True":
+                self.status = "Finished"
+                if isinstance(response["response"], str):
+                    await self.tab.add_history("user", self.prompt, "#303040")
+                    await self.tab.add_history("assistant", response["response"], "#303050")
+                    self.tab.text_input.clear()
+                    self.tab.submit_button.setDisabled(False)
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"LLM CHAT EXCEPTION: {e}")

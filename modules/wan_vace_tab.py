@@ -148,6 +148,7 @@ class WanVACERequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
@@ -173,7 +174,7 @@ class WanVACERequest:
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
         await self.generate()
         elapsed_time = time.time() - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
@@ -210,12 +211,23 @@ class WanVACERequest:
             self.last_frame.save(last_frame_temp_file.name, quality=100)
             image = image_to_base64(last_frame_temp_file.name, kwargs["width"], kwargs["height"])
             kwargs["last_frame"] = str(image)
-        response = await self.avernus_client.wan_vace(**kwargs)
-        await self.display_video(response)
+        try:
+            response = await self.avernus_client.wan_vace(**kwargs)
+            if response["status"] == True or response["status"] == "True":
+                self.status = "Finished"
+                await self.display_video(response["video"])
+            else:
+                self.status = "Failed"
+        except Exception as e:
+            self.status = "Failed"
+            print(f"WAN VACE REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
     async def display_video(self, response):
-        video_item = self.load_video_from_file(response)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        temp_file.write(response)
+        temp_file.close()
+        video_item = self.load_video_from_file(temp_file.name)
         self.gallery.gallery.add_item(video_item)
         self.gallery.gallery.tile_images()
         self.gallery.update()

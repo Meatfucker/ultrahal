@@ -39,7 +39,7 @@ def build_palette():
         "Hunyuan Video": ["HunyuanVideoRequest"],
         "Processors": ["RealESRGANRequest", "Swin2SRRequest"],
         "Kandinsky5": ["Kandinsky5Request"],
-        "LLM": ["LLMRequest"],
+        "LLM": ["LLMRequest", "LLMRerollRequest"],
         "Lumina 2": ["Lumina2Request"],
         "Qwen Image": ["QwenRequest", "QwenI2IRequest", "QwenEditRequest", "QwenInpaintRequest", "QwenEditPlusRequest"],
         "Sana Sprint": ["SanaSprintRequest", "SanaSprintI2IRequest"],

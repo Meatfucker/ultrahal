@@ -157,8 +157,11 @@ class FluxFillTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        loras = await self.avernus_client.list_flux_loras()
-        self.lora_list.insertItems(0, loras)
+        response = await self.avernus_client.list_flux_loras()
+        if response["status"] is True:
+            self.lora_list.insertItems(0, response["loras"])
+        else:
+            self.lora_list.insertItems(0, ["NONE"])
 
 class FluxFillRequest:
     def __init__(self,
@@ -185,6 +188,7 @@ class FluxFillRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.steps = steps
@@ -213,7 +217,7 @@ class FluxFillRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
 
@@ -272,10 +276,16 @@ class FluxFillRequest:
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 
         try:
-            base64_images = await self.avernus_client.flux_fill_image(self.enhanced_prompt, **kwargs)
-            images = await base64_to_images(base64_images)
-            await self.display_images(images)
+            response = await self.avernus_client.flux_fill_image(self.enhanced_prompt, **kwargs)
+            if response["status"] == True or "True":
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
         except Exception as e:
+            self.status = "Failed"
             print(f"FLUX INPAINT EXCEPTION: {e}")
 
 

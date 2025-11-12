@@ -161,8 +161,11 @@ class QwenEditPlusTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        loras = await self.avernus_client.list_qwen_image_loras()
-        self.lora_list.insertItems(0, loras)
+        response = await self.avernus_client.list_qwen_image_loras()
+        if response["status"] is True:
+            self.lora_list.insertItems(0, response["loras"])
+        else:
+            self.lora_list.insertItems(0, ["NONE"])
 
 
 class QwenEditPlusRequest:
@@ -188,6 +191,7 @@ class QwenEditPlusRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.negative_prompt = negative_prompt
@@ -218,7 +222,7 @@ class QwenEditPlusRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
@@ -261,12 +265,18 @@ class QwenEditPlusRequest:
         kwargs["prompt"] = self.enhanced_prompt
         try:
             if self.nunchaku_enabled:
-                base64_images = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
+                response = await self.avernus_client.qwen_image_edit_plus_nunchaku(**kwargs)
             else:
-                base64_images = await self.avernus_client.qwen_image_edit_plus(**kwargs)
-            images = await base64_to_images(base64_images)
-            await self.display_images(images)
+                response = await self.avernus_client.qwen_image_edit_plus(**kwargs)
+            if response["status"] == "True" or response["status"] == True:
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
         except Exception as e:
+            self.status = "Failed"
             print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
 
     @asyncSlot()

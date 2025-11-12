@@ -25,14 +25,15 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                #with open("output.wav", "wb") as f:
-                #    f.write(response.content)
-                return response.content
+                return {"status": status_header,
+                        "audio": response.content,
+                        }
+
             else:
                 print(f"ACE STEP ERROR: {response.status_code} - {response.text}")
-                return None
+                return {"status": status_header}
         except Exception as e:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}
@@ -54,7 +55,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"AURAFLOW ERROR: {response.status_code}")
         except Exception as e:
@@ -97,9 +98,38 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"CHROMA ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def chronoedit(self, prompt, negative_prompt=None, image=None, model_name=None, lora_name=None,
+                         width=None, height=None, steps=None, batch_size=None, seed=None, guidance_scale=None,
+                         flow_shift=None, num_frames=None):
+        """This takes a prompt and optional other variables and returns a list of base64 encoded images"""
+        url = f"http://{self.base_url}/chronoedit_generate"
+        data = {"prompt": prompt,
+                "negative_prompt":  negative_prompt,
+                "image": image,
+                "model_name": model_name,
+                "lora_name": lora_name,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "batch_size": batch_size,
+                "seed": seed,
+                "guidance_scale": guidance_scale,
+                "flow_shift": flow_shift,
+                "num_frames": num_frames}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"CHRONOEDIT ERROR: {response.status_code}")
         except Exception as e:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}
@@ -125,7 +155,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"FLUX FILL ERROR: {response.status_code}")
         except Exception as e:
@@ -156,7 +186,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"FLUX ERROR: {response.status_code}")
         except Exception as e:
@@ -186,7 +216,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"FLUX INPAINT ERROR: {response.status_code}")
         except Exception as e:
@@ -219,7 +249,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"FLUX KONTEXT ERROR: {response.status_code}")
         except Exception as e:
@@ -244,12 +274,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()  # Close the file so it can be used elsewhere
-                return temp_file.name
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"FRAMEPACK ERROR: {response.status_code} - {response.text}")
                 return None
@@ -274,7 +302,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"HIDREAM ERROR: {response.status_code}")
         except Exception as e:
@@ -299,12 +327,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()  # Close the file so it can be used elsewhere
-                return temp_file.name
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"HUNYUAN TI2V ERROR: {response.status_code} - {response.text}")
                 return None
@@ -326,7 +352,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images")
+                return response.json()
             else:
                 print(f"IMAGE_GEN_AUX_UPSCALE ERROR: {response.status_code}")
         except Exception as e:
@@ -349,12 +375,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()  # Close the file so it can be used elsewhere
-                return temp_file.name
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"KANDINSKY5 T2V ERROR: {response.status_code} - {response.text}")
                 return None
@@ -371,7 +395,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("loras", [])
+                return response.json()
             else:
                 print(f"LIST CHROMA LORAS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -387,7 +411,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("loras", [])
+                return response.json()
             else:
                 print(f"LIST FLUX LORAS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -403,7 +427,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("loras", [])
+                return response.json()
             else:
                 print(f"LIST QWEN IMAGE LORAS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -419,7 +443,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("loras", [])
+                return response.json()
             else:
                 print(f"LIST SD15 LORAS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -435,7 +459,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("sdxl_controlnets", [])
+                return response.json()
             else:
                 print(f"LIST SDXL CONTROLNETS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -451,7 +475,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("loras", [])
+                return response.json()
             else:
                 print(f"LIST SDXL LORAS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
@@ -467,12 +491,58 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("schedulers", [])
+                return response.json()
             else:
                 print(f"LIST SDXL SCHEDULERS ERROR: {response.status_code}, Response: {response.text}")
                 return {"ERROR": response.text}
         except Exception as e:
             print(f"list_sdxl_schedulers ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def llm_chat(self, prompt, model_name=None, messages=None):
+        """This takes a prompt, and optionally a model name and chat history, then returns a response"""
+        url = f"http://{self.base_url}/llm_chat"
+        data = {"prompt": prompt, "model_name": model_name, "messages": messages}
+
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"LLM ERROR: {response.status_code}, Response: {response.text}")
+                return {"LLM ERROR": response.text}
+        except Exception as e:
+            print(f"EXCEPTION ERROR: {e}")
+            return {"ERROR": str(e)}
+
+    async def ltx_ti2v(self, prompt, negative_prompt=None, width=None, height=None, steps=None, num_frames=None,
+                       guidance_scale=None, image=None,  seed=None, model_name=None, frame_rate=None):
+        """This takes a prompt and returns a video"""
+        url = f"http://{self.base_url}/ltx_ti2v_generate"
+        data = {"prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "width": width,
+                "height": height,
+                "num_frames": num_frames,
+                "guidance_scale": guidance_scale,
+                "seed": seed,
+                "steps": steps,
+                "image": image,
+                "model_name": model_name,
+                "frame_rate": frame_rate}
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
+            if response.status_code == 200:
+                return {"status": status_header,
+                        "video": response.content}
+            else:
+                print(f"LTX TI2V ERROR: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def lumina2_image(self, prompt, negative_prompt=None, model_name=None, width=None, height=None, steps=None,
@@ -492,28 +562,27 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"LUMINA2 ERROR: {response.status_code}")
         except Exception as e:
             print(f"ERROR: {e}")
             return {"ERROR": str(e)}
 
-    async def llm_chat(self, prompt, model_name=None, messages=None):
-        """This takes a prompt, and optionally a model name and chat history, then returns a response"""
-        url = f"http://{self.base_url}/llm_chat"
-        data = {"prompt": prompt, "model_name": model_name, "messages": messages}
+    async def queue_count(self):
+        """Fetches the current amount of requests in the queue"""
+        url = f"http://{self.base_url}/queue"
 
         try:
-            async with httpx.AsyncClient(timeout=None) as client:
-                response = await client.post(url, json=data)
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(url)
             if response.status_code == 200:
-                return response.json().get("response", "")
+                return response.json()
             else:
-                print(f"LLM ERROR: {response.status_code}, Response: {response.text}")
-                return {"LLM ERROR": response.text}
+                print(f"QUEUE COUNT ERROR: {response.status_code}, Response: {response.text}")
+                return {"ERROR": response.text}
         except Exception as e:
-            print(f"EXCEPTION ERROR: {e}")
+            print(f"queue_count ERROR: {e}")
             return {"ERROR": str(e)}
 
     async def qwen_image_image(self, prompt, negative_prompt=None, image=None, model_name=None, lora_name=None,
@@ -537,7 +606,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE ERROR: {response.status_code}")
         except Exception as e:
@@ -565,7 +634,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE NUNCHAKU ERROR: {response.status_code}")
         except Exception as e:
@@ -594,7 +663,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE INPAINT ERROR: {response.status_code}")
         except Exception as e:
@@ -623,7 +692,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE INPAINT NUNCHAKU ERROR: {response.status_code}")
         except Exception as e:
@@ -649,7 +718,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE EDIT ERROR: {response.status_code}")
         except Exception as e:
@@ -675,7 +744,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE EDIT NUNCHAKU ERROR: {response.status_code}")
         except Exception as e:
@@ -701,7 +770,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE EDIT ERROR: {response.status_code}")
         except Exception as e:
@@ -727,7 +796,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"QWEN IMAGE EDIT NUNCHAKU ERROR: {response.status_code}")
         except Exception as e:
@@ -743,7 +812,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images")
+                return response.json()
             else:
                 print(f"REALESRGAN ERROR: {response.status_code}")
         except Exception as e:
@@ -774,7 +843,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"SANA SPRINT ERROR: {response.status_code}")
         except Exception as e:
@@ -803,7 +872,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"SD15 ERROR: {response.status_code}")
         except Exception as e:
@@ -833,7 +902,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"SD15 INPAINT ERROR: {response.status_code}")
         except Exception as e:
@@ -868,7 +937,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"SDXL ERROR: {response.status_code}")
         except Exception as e:
@@ -898,7 +967,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images", [])
+                return response.json()
             else:
                 print(f"SDXL INPAINT ERROR: {response.status_code}")
         except Exception as e:
@@ -913,7 +982,7 @@ class AvernusClient:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
             if response.status_code == 200:
-                return response.json().get("images")
+                return response.json()
             else:
                 print(f"SWIN2SR ERROR: {response.status_code}")
         except Exception as e:
@@ -938,12 +1007,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()  # Close the file so it can be used elsewhere
-                return temp_file.name
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"WAN TI2V ERROR: {response.status_code} - {response.text}")
                 return None
@@ -970,12 +1037,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, json=data)
+                status_header = response.headers.get("x-status")
             if response.status_code == 200:
-                # Save the returned binary video content
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()  # Close the file so it can be used elsewhere
-                return temp_file.name
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"WAN VACE ERROR: {response.status_code} - {response.text}")
                 return None
@@ -1008,12 +1073,10 @@ class AvernusClient:
         try:
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(url, data=data, files=files)
-
-            if response.status_code == 200 and response.headers.get("content-type") == "video/mp4":
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                temp_file.write(response.content)
-                temp_file.close()
-                return temp_file.name
+            status_header = response.headers.get("x-status")
+            if response.status_code == 200:
+                return {"status": status_header,
+                        "video": response.content}
             else:
                 print(f"WAN TI2V ERROR: {response.status_code} - {response.text}")
                 return None

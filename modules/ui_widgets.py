@@ -252,7 +252,7 @@ class ClickableAudio(QGraphicsProxyWidget):
     def copy_mp3_to_clipboard(self):
         try:
             # Create a temporary MP3 file
-            with tempfile.NamedTemporaryFile(delete=True, suffix=".mp3") as tmp_mp3:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_mp3:
                 mp3_path = tmp_mp3.name
 
             # Convert WAV to MP3
@@ -1302,6 +1302,7 @@ class QueueObjectWidget(QFrame):
             self.type_label = QLabel(f"{self.queue_object.__class__.__name__} | {self.queue_object.queue_info}")
         else:
             self.type_label = QLabel(self.queue_object.__class__.__name__)
+        self.type_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.prompt_separator = QFrame(frameShape=QFrame.Shape.HLine, frameShadow=QFrame.Shadow.Plain, lineWidth=10)
         self.prompt_separator.setStyleSheet(f"color: #888888; background-color: #888888;")
         self.prompt_label = QLabel(self.queue_object.prompt, wordWrap=True)

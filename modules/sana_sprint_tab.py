@@ -180,6 +180,7 @@ class SanaSprintRequest:
         self.avernus_client = avernus_client
         self.gallery = gallery
         self.tabs = tabs
+        self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
         self.width = width
@@ -212,7 +213,7 @@ class SanaSprintRequest:
         await self.generate()
         end_time = time.time()
         elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"Finished\n{elapsed_time:.2f}s")
+        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
         self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
 
@@ -253,10 +254,16 @@ class SanaSprintRequest:
             self.enhanced_prompt = f"{self.enhanced_prompt}, {danbooru_tags}"
 
         try:
-            base64_images = await self.avernus_client.sana_sprint_image(self.enhanced_prompt, **kwargs)
-            images = await base64_to_images(base64_images)
-            await self.display_images(images)
+            response = await self.avernus_client.sana_sprint_image(self.enhanced_prompt, **kwargs)
+            if response["status"] == "True" or response["status"] == True:
+                self.status = "Finished"
+                base64_images = response["images"]
+                images = await base64_to_images(base64_images)
+                await self.display_images(images)
+            else:
+                self.status = "Failed"
         except Exception as e:
+            self.status = "Failed"
             print(f"SANA SPRINT REQUEST EXCEPTION: {e}")
 
     @asyncSlot()
