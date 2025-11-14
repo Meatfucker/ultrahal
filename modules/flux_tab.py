@@ -243,7 +243,7 @@ class FluxTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        response = await self.avernus_client.list_sdxl_loras()
+        response = await self.avernus_client.list_flux_loras()
         if response["status"] is True:
             self.lora_list.insertItems(0, response["loras"])
         else:
