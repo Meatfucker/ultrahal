@@ -1,4 +1,3 @@
-import time
 from typing import cast
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton
@@ -6,7 +5,8 @@ from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.queue import QueueTab
-from modules.ui_widgets import LLMHistoryWidget, ModelPickerWidget, QueueObjectWidget, QueueViewer, VerticalTabWidget
+from modules.request_helpers import BaseTextRequest, QueueObjectWidget
+from modules.ui_widgets import LLMHistoryWidget, ModelPickerWidget, QueueViewer, VerticalTabWidget
 
 
 class LlmTab(QWidget):
@@ -74,29 +74,17 @@ class LlmTab(QWidget):
         self.history_viewer.add_message(role=role, message=content, hex_color=hex_color)
 
 
-class LLMRequest:
+class LLMRequest(BaseTextRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
-                 tab: LlmTab,
+                 tabs: LlmTab,
                  input_text: str,
                  model_name: str):
-        self.avernus_client = avernus_client
-        self.tab = tab
-        self.status = None
+        super().__init__(avernus_client, tabs)
         self.prompt = input_text
         self.model_name = model_name
         self.queue_info = None
         self.ui_item: QueueObjectWidget | None = None
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
         if self.model_name == "":

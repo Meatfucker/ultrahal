@@ -1,18 +1,16 @@
-import asyncio
 import tempfile
-import time
 from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, ImageGallery, ImageInputBox, QueueObjectWidget, QueueViewer,
-                                SingleLineInputBox, VerticalTabWidget)
+from modules.request_helpers import BaseImageRequest, QueueObjectWidget
+from modules.ui_widgets import (ImageGallery, ImageInputBox, QueueViewer, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64
 
 
@@ -137,32 +135,20 @@ class Swin2SRConfig(QWidget):
         self.tabs.parent().pending_requests.append(request)
         self.tabs.parent().request_event.set()
 
-class RealESRGANRequest:
+class RealESRGANRequest(BaseImageRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
-                 tab: VerticalTabWidget,
+                 tabs: VerticalTabWidget,
                  image: QPixmap,
                  scale: int):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tab
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = "RealESRGAN"
         self.image = image
         self.scale = scale
         self.queue_info = None
         self.ui_item: QueueObjectWidget | None = None
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
         print("RealESRGAN:")
@@ -182,44 +168,18 @@ class RealESRGANRequest:
             self.status = "Failed"
             print(f"REALESRGAN REQUEST EXCEPTION: {e}")
 
-
-    @asyncSlot()
-    async def display_images(self, images):
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
-            self.gallery.gallery.add_item(pixmap_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
-
-
-class Swin2SRRequest:
+class Swin2SRRequest(BaseImageRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
-                 tab: VerticalTabWidget,
+                 tabs: VerticalTabWidget,
                  image: QPixmap):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tab
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = "Swin2SR"
         self.image = image
         self.queue_info = None
         self.ui_item: QueueObjectWidget | None = None
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     async def generate(self):
         print("Swin2SR:")
@@ -238,15 +198,3 @@ class Swin2SRRequest:
         except Exception as e:
             self.status = "Failed"
             print(f"SWIN2SR REQUEST EXCEPTION: {e}")
-
-    @asyncSlot()
-    async def display_images(self, images):
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
-            self.gallery.gallery.add_item(pixmap_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()

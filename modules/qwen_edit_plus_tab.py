@@ -1,19 +1,16 @@
-import asyncio
 import tempfile
-import time
 from typing import cast
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox,
-                                QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
+from modules.request_helpers import BaseImageRequest, QueueObjectWidget
+from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox, QueueViewer,
+                                ResolutionInput, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
 
 
@@ -168,7 +165,7 @@ class QwenEditPlusTab(QWidget):
             self.lora_list.insertItems(0, ["NONE"])
 
 
-class QwenEditPlusRequest:
+class QwenEditPlusRequest(BaseImageRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -188,9 +185,7 @@ class QwenEditPlusRequest:
                  add_danbooru_tags: bool,
                  danbooru_tags_amount: int,
                  nunchaku_enabled: bool):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tabs
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
@@ -214,16 +209,6 @@ class QwenEditPlusRequest:
             self.width = 1024
         if self.height == "":
             self.height = 1024
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
     async def generate(self):
@@ -278,15 +263,3 @@ class QwenEditPlusRequest:
         except Exception as e:
             self.status = "Failed"
             print(f"QWEN IMAGE EDIT PLUS EXCEPTION: {e}")
-
-    @asyncSlot()
-    async def display_images(self, images):
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
-            self.gallery.gallery.add_item(pixmap_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()

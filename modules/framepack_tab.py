@@ -1,18 +1,17 @@
-import asyncio
 import tempfile
-import time
 from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QCheckBox, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QSizePolicy
+from PySide6.QtWidgets import QCheckBox, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickableVideo, ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox,
-                                ResolutionInput, QueueObjectWidget, QueueViewer, SingleLineInputBox, VerticalTabWidget)
+from modules.request_helpers import BaseVideoRequest, QueueObjectWidget
+from modules.ui_widgets import (ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
+                                QueueViewer, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import image_to_base64
 
 
@@ -120,7 +119,7 @@ class FramepackTab(QWidget):
         self.tabs.parent().request_event.set()
 
 
-class FramepackRequest:
+class FramepackRequest(BaseVideoRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -139,9 +138,7 @@ class FramepackRequest:
                  last_frame: QPixmap,
                  enhance_prompt: bool,
                  model_name: str):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tabs
+        super().__init__(avernus_client, gallery, tabs)
         self.prompt = prompt
         self.status = None
         self.enhanced_prompt = prompt
@@ -160,15 +157,6 @@ class FramepackRequest:
         self.model_name = model_name
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"Framepack: {self.width}x{self.height} Frames: {self.frames} FF:{self.first_frame_enabled}, LF:{self.last_frame_enabled}"
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        elapsed_time = time.time() - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
     async def generate(self):
@@ -213,20 +201,3 @@ class FramepackRequest:
         except Exception as e:
             self.status = "Failed"
             print(f"FRAMEPACK FAILURE: {e}")
-
-
-    @asyncSlot()
-    async def display_video(self, response):
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        temp_file.write(response.content)
-        temp_file.close()
-        video_item = self.load_video_from_file(temp_file.name)
-        self.gallery.gallery.add_item(video_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
-
-    def load_video_from_file(self, video_path):
-        return ClickableVideo(video_path, self.prompt)
-

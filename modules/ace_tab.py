@@ -1,18 +1,14 @@
-import asyncio
-import tempfile
-import time
 from typing import cast
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
-                               QWidget)
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickableAudio, ImageGallery, QueueObjectWidget, QueueViewer, SingleLineInputBox,
-                                VerticalTabWidget)
+from modules.ui_widgets import ImageGallery, QueueViewer, SingleLineInputBox, VerticalTabWidget
+from modules.request_helpers import BaseAudioRequest, QueueObjectWidget
 
 
 class ACETab(QWidget):
@@ -94,7 +90,7 @@ class ACETab(QWidget):
         self.tabs.parent().request_event.set()
 
 
-class ACERequest:
+class ACERequest(BaseAudioRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -106,9 +102,7 @@ class ACERequest:
                  guidance_scale: str,
                  omega_scale: str,
                  seed: str):
-        self.avernus_client: AvernusClient = avernus_client
-        self.gallery: ImageGallery = gallery
-        self.tabs = tabs
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt: str = prompt
         self.lyrics: str = lyrics
@@ -119,15 +113,6 @@ class ACERequest:
         self.seed: str = seed
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"Duration:{self.length}s, Steps:{self.steps}, Guidance:{self.guidance_scale}, Omega:{self.omega_scale}"
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        elapsed_time = time.time() - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
 
     @asyncSlot()
     async def generate(self):
@@ -142,7 +127,7 @@ class ACERequest:
         if self.seed != "": kwargs["actual_seeds"] = int(self.seed)
         try:
             response = await self.avernus_client.ace_music(**kwargs)
-            if response["status"] == "True":
+            if response["status"] == "True" or response["status"] == True:
                 self.status = "Finished"
                 await self.display_audio(response["audio"])
             else:
@@ -150,19 +135,3 @@ class ACERequest:
         except Exception as e:
             self.status = "Failed"
             print(f"ACE FAILURE: {e}")
-
-    @asyncSlot()
-    async def display_audio(self, response):
-        audio_item = self.load_audio_from_bytes(response)
-        self.gallery.gallery.add_item(audio_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
-
-    def load_audio_from_bytes(self, audio_bytes):
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as f:
-            f.write(audio_bytes)
-            f.flush()
-            return ClickableAudio(f.name, self.prompt, self.lyrics)
-

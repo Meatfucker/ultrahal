@@ -1,20 +1,17 @@
-import asyncio
 import tempfile
-import time
 from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy,
-                                QVBoxLayout, QWidget)
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget,
-                                ParagraphInputBox, QueueObjectWidget, QueueViewer, ResolutionInput, SingleLineInputBox,
-                                VerticalTabWidget)
+from modules.request_helpers import BaseImageRequest, QueueObjectWidget
+from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox,
+                                QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64, get_random_artist_prompt, get_generic_danbooru_tags
 
 
@@ -266,7 +263,7 @@ class FluxTab(QWidget):
             self.i2i_image_label.enable_checkbox.blockSignals(False)
 
 
-class FluxRequest:
+class FluxRequest(BaseImageRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -294,9 +291,7 @@ class FluxRequest:
                  add_danbooru_tags: bool,
                  danbooru_tags_amount: int,
                  model_name: str):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tabs
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = prompt
         self.negative_prompt = negative_prompt
@@ -328,17 +323,6 @@ class FluxRequest:
             self.width = 1024
         if self.height == "":
             self.height = 1024
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
-
 
     @asyncSlot()
     async def generate(self):
@@ -398,8 +382,7 @@ class FluxRequest:
                 kwargs["model_name"] = str(self.model_name)
                 response = await self.avernus_client.flux_image(self.enhanced_prompt, **kwargs)
             print(response["status"])
-            if response["status"] == True or "True":
-                print("TRUE")
+            if response["status"] == "True" or response["status"] == True:
                 self.status = "Finished"
                 base64_images = response["images"]
                 images = await base64_to_images(base64_images)
@@ -410,18 +393,6 @@ class FluxRequest:
         except Exception as e:
             self.status = "Failed"
             print(f"FLUX EXCEPTION: {e}")
-
-    @asyncSlot()
-    async def display_images(self, images):
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
-            self.gallery.gallery.add_item(pixmap_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
 
 class FluxI2IRequest(FluxRequest):
     def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,

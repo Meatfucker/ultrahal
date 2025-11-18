@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QHBoxLayout, QWidget
 
 from modules.avernus_client import AvernusClient
-from modules.ui_widgets import ImageGallery, ImageGalleryGrid
+from modules.ui_widgets import ImageGallery
 
 
 class GalleryTab(QWidget):

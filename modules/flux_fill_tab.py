@@ -1,20 +1,17 @@
-import asyncio
 import tempfile
-import time
 from typing import cast
 
-from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import  (QApplication, QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout,
-                                QWidget)
+from PySide6.QtWidgets import  QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
-from modules.ui_widgets import (ClickablePixmap, HorizontalSlider, ImageGallery, OutpaintingWidget, PainterWidget,
-                                ParagraphInputBox, QueueObjectWidget, QueueViewer, SingleLineInputBox, VerticalTabWidget)
+from modules.request_helpers import BaseImageRequest, QueueObjectWidget
+from modules.ui_widgets import (HorizontalSlider, ImageGallery, OutpaintingWidget, PainterWidget, ParagraphInputBox,
+                                QueueViewer, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64, get_random_artist_prompt, get_generic_danbooru_tags
 
 
@@ -163,7 +160,7 @@ class FluxFillTab(QWidget):
         else:
             self.lora_list.insertItems(0, ["NONE"])
 
-class FluxFillRequest:
+class FluxFillRequest(BaseImageRequest):
     def __init__(self,
                  avernus_client: AvernusClient,
                  gallery: ImageGallery,
@@ -185,9 +182,7 @@ class FluxFillRequest:
                  add_artist: bool,
                  add_danbooru_tags: bool,
                  danbooru_tags_amount: int):
-        self.avernus_client = avernus_client
-        self.gallery = gallery
-        self.tabs = tabs
+        super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = prompt
         self.enhanced_prompt = prompt
@@ -209,17 +204,6 @@ class FluxFillRequest:
         self.danbooru_tags_amount = danbooru_tags_amount
         self.ui_item: QueueObjectWidget | None = None
         self.queue_info = f"{self.width}x{self.height}, {self.lora_name},EP:{self.enhance_prompt}"
-
-    async def run(self):
-        start_time = time.time()
-        self.ui_item.status_label.setText("Running")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #004400;")
-        await self.generate()
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        self.ui_item.status_label.setText(f"{self.status}\n{elapsed_time:.2f}s")
-        self.ui_item.status_container.setStyleSheet(f"color: #ffffff; background-color: #440000;")
-
 
     @asyncSlot()
     async def generate(self):
@@ -277,7 +261,7 @@ class FluxFillRequest:
 
         try:
             response = await self.avernus_client.flux_fill_image(self.enhanced_prompt, **kwargs)
-            if response["status"] == True or "True":
+            if response["status"] == "True" or response["status"] == True:
                 self.status = "Finished"
                 base64_images = response["images"]
                 images = await base64_to_images(base64_images)
@@ -287,61 +271,3 @@ class FluxFillRequest:
         except Exception as e:
             self.status = "Failed"
             print(f"FLUX INPAINT EXCEPTION: {e}")
-
-
-    @asyncSlot()
-    async def display_images(self, images):
-        for image in images:
-            pixmap = QPixmap()
-            pixmap.loadFromData(image.getvalue())
-            pixmap_item = ClickablePixmap(pixmap, self.gallery.gallery, self.tabs)
-            self.gallery.gallery.add_item(pixmap_item)
-        self.gallery.gallery.tile_images()
-        self.gallery.update()
-        await asyncio.sleep(0)  # Let the event loop breathe
-        QApplication.processEvents()
-
-    @asyncSlot()
-    async def get_outpainting_images(self, outpainting_pixels, outpainting_direction, image, mask_image, width, height):
-        if outpainting_direction in ("↖", "↗", "↙", "↘"):
-            new_width = width + outpainting_pixels
-            new_height = height + outpainting_pixels
-            if outpainting_direction == "↖":
-                paste_position = (outpainting_pixels, outpainting_pixels)
-            elif outpainting_direction == "↗":
-                paste_position = (0, outpainting_pixels)
-            elif outpainting_direction == "↙":
-                paste_position = (outpainting_pixels, 0)
-            elif outpainting_direction == "↘":
-                paste_position = (0, 0)
-
-        if outpainting_direction in ("↓", "🡩"):
-            new_width = width
-            new_height = height + outpainting_pixels
-            if outpainting_direction == "↓":
-                paste_position = (0, 0)
-            elif outpainting_direction == "🡩":
-                paste_position = (0, outpainting_pixels)
-
-        if outpainting_direction in ("←", "→"):
-            new_width = width + outpainting_pixels
-            new_height = height
-            if outpainting_direction == "←":
-                paste_position = (outpainting_pixels, 0)
-            elif outpainting_direction == "→":
-                paste_position = (0, 0)
-
-        if outpainting_direction in "O":
-            new_width = width + (outpainting_pixels * 2)
-            new_height = height + (outpainting_pixels * 2)
-            paste_position = (outpainting_pixels, outpainting_pixels)
-
-        new_image = Image.new("RGBA", (new_width, new_height), (0, 0, 0))
-        new_image.paste(image, paste_position)
-
-        old_mask = Image.new("RGBA", (width, height), (0, 0, 0))
-        new_mask = Image.new("RGBA", (new_width, new_height), (255, 255, 255))
-        new_mask.paste(old_mask, paste_position)
-
-        #new_mask.paste(mask_image, paste_position)
-        return new_image, new_mask, new_width, new_height
