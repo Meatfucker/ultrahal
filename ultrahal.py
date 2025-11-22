@@ -168,20 +168,23 @@ class MainWindow(QWidget):
 
     @asyncSlot()
     async def update_lists(self):
-        await self.sdxl_tab.make_lora_list()
-        await self.sdxl_tab.make_controlnet_list()
-        await self.sdxl_tab.make_scheduler_list()
-        await self.sdxl_inpaint_tab.make_lora_list()
-        await self.sdxl_inpaint_tab.make_scheduler_list()
-        await self.flux_tab.make_lora_list()
-        await self.flux_inpaint_tab.make_lora_list()
-        await self.flux_fill_tab.make_lora_list()
-        await self.qwen_tab.make_lora_list()
-        await self.qwen_edit_tab.make_lora_list()
-        await self.qwen_inpaint_tab.make_lora_list()
-        await self.chroma_tab.make_lora_list()
-        await self.sd15_tab.make_lora_list()
-        await self.sd15_inpaint_tab.make_lora_list()
+        try:
+            await self.sdxl_tab.make_lora_list()
+            await self.sdxl_tab.make_controlnet_list()
+            await self.sdxl_tab.make_scheduler_list()
+            await self.sdxl_inpaint_tab.make_lora_list()
+            await self.sdxl_inpaint_tab.make_scheduler_list()
+            await self.flux_tab.make_lora_list()
+            await self.flux_inpaint_tab.make_lora_list()
+            await self.flux_fill_tab.make_lora_list()
+            await self.qwen_tab.make_lora_list()
+            await self.qwen_edit_tab.make_lora_list()
+            await self.qwen_inpaint_tab.make_lora_list()
+            await self.chroma_tab.make_lora_list()
+            await self.sd15_tab.make_lora_list()
+            await self.sd15_inpaint_tab.make_lora_list()
+        except Exception as e:
+            print(f"UPDATING LORA LISTS FAILED: {e}")
 
     def closeEvent(self, event):
         QApplication.quit()

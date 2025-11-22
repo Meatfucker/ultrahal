@@ -142,3 +142,18 @@ def get_random_artist_prompt():
         data = json.load(file)
         selected_artist = random.choice(data)
         return selected_artist.get('prompt')
+
+async def get_enhanced_prompt(avernus_client, prompt, instructions=None):
+    try:
+        if instructions is None:
+            llm_prompt = await avernus_client.llm_chat(
+                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {prompt}")
+        else:
+            llm_prompt = await avernus_client.llm_chat(f"{instructions}: {prompt}")
+        if llm_prompt["status"] is True or llm_prompt["status"] == "True":
+            return llm_prompt["response"]
+        else:
+            return prompt
+    except Exception as e:
+        print(f"ENHANCE PROMPT EXCEPTION: {e}")
+        return prompt

@@ -12,7 +12,7 @@ from modules.gallery import GalleryTab
 from modules.queue import QueueTab
 from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox,
                                 QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt
+from modules.utils import base64_to_images, image_to_base64, get_generic_danbooru_tags, get_random_artist_prompt, get_enhanced_prompt
 from modules.request_helpers import BaseImageRequest, QueueObjectWidget
 
 
@@ -333,10 +333,8 @@ class SDXLRequest(BaseImageRequest):
             kwargs["controlnet_processor"] = str(self.controlnet_processor)
             if self.controlnet_strength != "":
                 kwargs["controlnet_conditioning"] = float(self.controlnet_strength)
-
         if self.enhance_prompt:
-            llm_prompt = await self.avernus_client.llm_chat(
-                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt)
             self.enhanced_prompt = llm_prompt
         if self.add_artist:
             random_artist_prompt = get_random_artist_prompt()

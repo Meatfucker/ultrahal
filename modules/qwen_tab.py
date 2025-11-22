@@ -12,7 +12,8 @@ from modules.queue import QueueTab
 from modules.request_helpers import BaseImageRequest, QueueObjectWidget
 from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ParagraphInputBox, QueueViewer,
                                 ResolutionInput, SingleLineInputBox, VerticalTabWidget)
-from modules.utils import base64_to_images, image_to_base64, get_random_artist_prompt, get_generic_danbooru_tags
+from modules.utils import (base64_to_images, image_to_base64, get_random_artist_prompt, get_generic_danbooru_tags,
+                           get_enhanced_prompt)
 
 class QwenTab(QWidget):
     def __init__(self, avernus_client: AvernusClient, tabs: VerticalTabWidget):
@@ -322,8 +323,7 @@ class QwenRequest(BaseImageRequest):
             kwargs["height"] = None
 
         if self.enhance_prompt:
-            llm_prompt = await self.avernus_client.llm_chat(
-                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt)
             self.enhanced_prompt = llm_prompt
         if self.add_artist:
             random_artist_prompt = get_random_artist_prompt()

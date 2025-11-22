@@ -12,7 +12,7 @@ from modules.queue import QueueTab
 from modules.request_helpers import BaseVideoRequest, QueueObjectWidget
 from modules.ui_widgets import (ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox, ResolutionInput,
                                 QueueViewer, SingleLineInputBox, VerticalTabWidget)
-from modules.utils import image_to_base64
+from modules.utils import image_to_base64, get_enhanced_prompt
 
 
 class FramepackTab(QWidget):
@@ -176,8 +176,7 @@ class FramepackRequest(BaseVideoRequest):
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.model_name != "" or None: kwargs["model_name"] = str(self.model_name)
         if self.enhance_prompt:
-            llm_prompt = await self.avernus_client.llm_chat(
-                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt, "Rewrite and enhance the original editing instruction with richer detail, clearer structure, and improved descriptive quality. When adding text that should appear inside an image, place that text inside double quotes and in capital letters. Explain what needs to be changed and what needs to be left unchanged. Explain in details how to change  camera position or tell that camera position shouldn't be changed. example: Original text: add text 911 and 'Police' Result: Add the word '911' in large blue letters to the hood. Below that, add the word 'POLICE.' Keep the camera position unchanged, as do the background, car position, and lighting. Answer only with expanded prompt. Rewrite Prompt: ")
             self.enhanced_prompt = llm_prompt
         kwargs["prompt"] = self.enhanced_prompt
 

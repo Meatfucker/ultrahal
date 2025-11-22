@@ -10,7 +10,7 @@ from modules.request_helpers import BaseImageRequest, QueueObjectWidget
 from modules.ui_widgets import (HorizontalSlider, ImageGallery, ModelPickerWidget, ParagraphInputBox,
                                 PromptPickerWidget, QueueViewer, ResolutionInput, SingleLineInputBox,
                                 VerticalTabWidget)
-from modules.utils import base64_to_images, get_generic_danbooru_tags, get_random_artist_prompt
+from modules.utils import base64_to_images, get_generic_danbooru_tags, get_random_artist_prompt, get_enhanced_prompt
 
 
 class HiDreamTab(QWidget):
@@ -172,8 +172,8 @@ class HiDreamRequest(BaseImageRequest):
         if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.enhance_prompt:
-            llm_prompt = await self.avernus_client.llm_chat(
-                f"Turn the following prompt into a three sentence visual description of it. Here is the prompt: {self.prompt}")
+            llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt)
+            self.enhanced_prompt = llm_prompt
             self.enhanced_prompt = llm_prompt
         if self.add_artist:
             random_artist_prompt = get_random_artist_prompt()
