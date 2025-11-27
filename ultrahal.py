@@ -15,6 +15,7 @@ from modules.chroma_tab import ChromaTab
 from modules.flux_fill_tab import FluxFillTab
 from modules.flux_inpaint_tab import FluxInpaintTab
 from modules.flux_tab import FluxTab
+from modules.flux2_tab import Flux2Tab
 from modules.framepack_tab import FramepackTab
 from modules.gallery import GalleryTab
 from modules.hidream import HiDreamTab
@@ -34,6 +35,7 @@ from modules.qwen_image_inpaint_tab import QwenImageInpaintTab
 from modules.qwen_edit_plus_tab import QwenEditPlusTab
 from modules.wan_tab import WanTab
 from modules.wan_vace_tab import WanVACETab
+from modules.zimage_tab import ZImageTab
 
 
 class MainWindow(QWidget):
@@ -75,6 +77,7 @@ class MainWindow(QWidget):
         self.flux_tab = FluxTab(self.avernus_client, self.tabs)
         self.flux_inpaint_tab = FluxInpaintTab(self.avernus_client, self.tabs)
         self.flux_fill_tab = FluxFillTab(self.avernus_client, self.tabs)
+        self.flux2_tab = Flux2Tab(self.avernus_client, self.tabs)
         self.framepack_tab = FramepackTab(self.avernus_client, self.tabs)
         self.hidream_tab = HiDreamTab(self.avernus_client, self.tabs)
         self.hunyuan_video_tab = HunyuanVideoTab(self.avernus_client, self.tabs)
@@ -92,6 +95,7 @@ class MainWindow(QWidget):
         self.sdxl_inpaint_tab = SdxlInpaintTab(self.avernus_client, self.tabs)
         self.wan_tab = WanTab(self.avernus_client, self.tabs)
         self.wan_vace_tab = WanVACETab(self.avernus_client, self.tabs)
+        self.zimage_tab = ZImageTab(self.avernus_client, self.tabs)
 
         self.tabs.addTab(self.ace_tab, "ACE")
         self.tabs.addTab(self.auraflow_tab, "AuraFlow")
@@ -99,6 +103,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.flux_tab, "Flux")
         self.tabs.addTab(self.flux_inpaint_tab, "Flux Inpaint")
         self.tabs.addTab(self.flux_fill_tab, "Flux Fill")
+        self.tabs.addTab(self.flux2_tab, "Flux2")
         self.tabs.addTab(self.framepack_tab, "Framepack")
         self.tabs.addTab(self.hidream_tab, "HiDream")
         self.tabs.addTab(self.hunyuan_video_tab, "Hunyuan Video")
@@ -116,6 +121,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.sdxl_inpaint_tab, "SDXL Inpaint")
         self.tabs.addTab(self.wan_tab, "Wan")
         self.tabs.addTab(self.wan_vace_tab, "Wan VACE")
+        self.tabs.addTab(self.zimage_tab, "ZImage")
 
         self.avernus_layout = QHBoxLayout()
         self.avernus_layout.addWidget(self.avernus_label)
@@ -177,12 +183,15 @@ class MainWindow(QWidget):
             await self.flux_tab.make_lora_list()
             await self.flux_inpaint_tab.make_lora_list()
             await self.flux_fill_tab.make_lora_list()
+            await self.flux2_tab.make_lora_list()
             await self.qwen_tab.make_lora_list()
             await self.qwen_edit_tab.make_lora_list()
             await self.qwen_inpaint_tab.make_lora_list()
             await self.chroma_tab.make_lora_list()
             await self.sd15_tab.make_lora_list()
+            await self.sdxl_tab.make_scheduler_list()
             await self.sd15_inpaint_tab.make_lora_list()
+            await self.sd15_inpaint_tab.make_scheduler_list()
         except Exception as e:
             print(f"UPDATING LORA LISTS FAILED: {e}")
 

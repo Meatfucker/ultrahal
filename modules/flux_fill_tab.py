@@ -154,11 +154,17 @@ class FluxFillTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        response = await self.avernus_client.list_flux_loras()
-        if response["status"] is True:
-            self.lora_list.insertItems(0, response["loras"])
-        else:
-            self.lora_list.insertItems(0, ["NONE"])
+        try:
+            response = await self.avernus_client.list_flux_loras()
+            if response["status"] is True:
+                if len(response["loras"]) == 0:
+                    self.lora_list.insertItems(0, ["NONE"])
+                else:
+                    self.lora_list.insertItems(0, response["loras"])
+            else:
+                self.lora_list.insertItems(0, ["NONE"])
+        except:
+            self.lora_list.insertItems(0, ["LORA LIST ERROR"])
 
 class FluxFillRequest(BaseImageRequest):
     def __init__(self,

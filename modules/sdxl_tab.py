@@ -224,31 +224,43 @@ class SdxlTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        response = await self.avernus_client.list_sdxl_loras()
-        if response["status"] is True:
-            self.lora_list.insertItems(0, response["loras"])
-        else:
-            self.lora_list.insertItems(0, ["NONE"])
+        try:
+            response = await self.avernus_client.list_sdxl_loras()
+            if response["status"] is True:
+                if len(response["loras"]) == 0:
+                    self.lora_list.insertItems(0, ["NONE"])
+                else:
+                    self.lora_list.insertItems(0, response["loras"])
+            else:
+                self.lora_list.insertItems(0, ["NONE"])
+        except:
+            self.lora_list.insertItems(0, ["LORA LIST ERROR"])
 
     @asyncSlot()
     async def make_controlnet_list(self):
         self.controlnet_list.clear()
-        response = await self.avernus_client.list_sdxl_controlnets()
-        if response["status"] is True:
-            for controlnet in response["sdxl_controlnets"]:
-                self.controlnet_list.addItem(controlnet)
-        else:
-            self.controlnet_list.addItem("None")
+        try:
+            response = await self.avernus_client.list_sdxl_controlnets()
+            if response["status"] is True:
+                for controlnet in response["sdxl_controlnets"]:
+                    self.controlnet_list.addItem(controlnet)
+            else:
+                self.controlnet_list.addItem("None")
+        except:
+            self.controlnet_list.addItem("CONTROLNET LIST ERROR")
 
     @asyncSlot()
     async def make_scheduler_list(self):
         self.scheduler_list.clear()
-        response = await self.avernus_client.list_sdxl_schedulers()
-        if response["status"] is True:
-            for scheduler in response["schedulers"]:
-                self.scheduler_list.addItem(scheduler)
-        else:
-            self.scheduler_list.addItem("NONE")
+        try:
+            response = await self.avernus_client.list_sdxl_schedulers()
+            if response["status"] is True:
+                for scheduler in response["schedulers"]:
+                    self.scheduler_list.addItem(scheduler)
+            else:
+                self.scheduler_list.addItem("NONE")
+        except:
+            self.scheduler_list.addItem("SCHEDULER LIST ERROR")
 
 
 class SDXLRequest(BaseImageRequest):

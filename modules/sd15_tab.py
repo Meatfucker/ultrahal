@@ -3,7 +3,8 @@ from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout,
+                               QWidget)
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
@@ -36,6 +37,7 @@ class SD15Tab(QWidget):
         self.negative_prompt_picker = PromptPickerWidget()
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.model_picker = ModelPickerWidget("sd15")
+        self.scheduler_list = QComboBox()
         self.lora_list = QListWidget()
         self.lora_list.setSelectionMode(QListWidget.MultiSelection)
         self.lora_list.setStyleSheet("""
@@ -71,6 +73,7 @@ class SD15Tab(QWidget):
         self.input_layout.addLayout(self.i2i_strength_label)
 
         self.prompt_layout.addLayout(self.model_picker)
+        self.prompt_layout.addWidget(self.scheduler_list)
         self.prompt_layout.addWidget(self.prompt_picker)
         self.prompt_layout.addLayout(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)
@@ -108,6 +111,7 @@ class SD15Tab(QWidget):
         guidance_scale = self.guidance_scale_label.input.text()
         seed = self.seed_label.input.text()
         model_name = self.model_picker.model_list_picker.currentText()
+        scheduler = self.scheduler_list.currentText()
         lora_items = self.lora_list.selectedItems()
         lora_name = "<None>"
         if lora_items:
@@ -147,7 +151,8 @@ class SD15Tab(QWidget):
                                          add_danbooru_tags=add_danbooru_tags,
                                          danbooru_tags_amount=danbooru_tags_amount,
                                          model_name=model_name,
-                                         seed=seed)
+                                         seed=seed,
+                                         scheduler=scheduler)
             else:
                 request = SD15Request(avernus_client=self.avernus_client,
                                       gallery=self.gallery,
@@ -168,7 +173,8 @@ class SD15Tab(QWidget):
                                       add_danbooru_tags=add_danbooru_tags,
                                       danbooru_tags_amount=danbooru_tags_amount,
                                       model_name=model_name,
-                                      seed=seed)
+                                      seed=seed,
+                                      scheduler=scheduler)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
             self.tabs.parent().pending_requests.append(request)
@@ -179,11 +185,30 @@ class SD15Tab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        response = await self.avernus_client.list_sd15_loras()
-        if response["status"] is True:
-            self.lora_list.insertItems(0, response["loras"])
-        else:
-            self.lora_list.insertItems(0, ["NONE"])
+        try:
+            response = await self.avernus_client.list_sd15_loras()
+            if response["status"] is True:
+                if len(response["loras"]) == 0:
+                    self.lora_list.insertItems(0, ["NONE"])
+                else:
+                    self.lora_list.insertItems(0, response["loras"])
+            else:
+                self.lora_list.insertItems(0, ["NONE"])
+        except:
+            self.lora_list.insertItems(0, ["LORA LIST ERROR"])
+
+    @asyncSlot()
+    async def make_scheduler_list(self):
+        self.scheduler_list.clear()
+        try:
+            response = await self.avernus_client.list_sdxl_schedulers()
+            if response["status"] is True:
+                for scheduler in response["schedulers"]:
+                    self.scheduler_list.addItem(scheduler)
+            else:
+                self.scheduler_list.addItem("NONE")
+        except:
+            self.scheduler_list.addItem("SCHEDULER LIST ERROR")
 
 class SD15Request(BaseImageRequest):
     def __init__(self,
@@ -206,7 +231,8 @@ class SD15Request(BaseImageRequest):
                  seed: str,
                  add_artist: bool,
                  add_danbooru_tags: bool,
-                 danbooru_tags_amount: int):
+                 danbooru_tags_amount: int,
+                 scheduler: str):
         super().__init__(avernus_client, gallery, tabs)
         self.status = None
         self.prompt = prompt
@@ -227,6 +253,7 @@ class SD15Request(BaseImageRequest):
         self.add_artist = add_artist
         self.add_danbooru_tags = add_danbooru_tags
         self.danbooru_tags_amount = danbooru_tags_amount
+        self.scheduler = scheduler
         if self.width == "":
             self.width = 512
         if self.height == "":
@@ -247,6 +274,7 @@ class SD15Request(BaseImageRequest):
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
         kwargs["model_name"] = str(self.model_name)
+        kwargs["scheduler"] = str(self.scheduler)
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
 

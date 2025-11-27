@@ -1250,6 +1250,8 @@ def show_context_menu(tabs, pixmap):
     flux_inpaint_tab = tabs.named_widget("Flux Inpaint")
     flux_fill_tab = tabs.named_widget("Flux Fill")
 
+    flux2_tab = tabs.named_widget("Flux2")
+
     framepack_tab = tabs.named_widget("Framepack")
 
     qwen_image_tab = tabs.named_widget("Qwen")
@@ -1273,6 +1275,7 @@ def show_context_menu(tabs, pixmap):
 
     chroma_menu = menu.addMenu("Chroma")
     flux_menu = menu.addMenu("Flux")
+    flux2_menu = menu.addMenu("Flux2")
     framepack_menu = menu.addMenu("Framepack")
     sana_sprint_menu = menu.addMenu("Sana Sprint")
     sd15_menu = menu.addMenu("SD 1.5")
@@ -1287,6 +1290,8 @@ def show_context_menu(tabs, pixmap):
     flux_sent_to_kontext = flux_menu.addAction("Send to Flux Kontext")
     flux_send_to_inpaint = flux_menu.addAction("Send to Flux Inpaint")
     flux_send_to_fill = flux_menu.addAction("Send to Flux Fill")
+
+    flux2_send_to_i2i = flux2_menu.addAction("Send to Flux2")
 
     framepack_send_to_first_frame = framepack_menu.addAction("Send to Framepack First Frame")
     framepack_send_to_last_frame = framepack_menu.addAction("Send to Framepack Last Frame")
@@ -1334,6 +1339,9 @@ def show_context_menu(tabs, pixmap):
         flux_inpaint_tab.paint_area.set_image(pixmap)
     if action == flux_send_to_fill:
         flux_fill_tab.paint_area.set_image(pixmap)
+
+    if action == flux2_send_to_i2i:
+        flux2_tab.i2i_image_label.load_pixmap(pixmap)
 
     if action == framepack_send_to_first_frame:
         framepack_tab.first_frame_label.load_pixmap(pixmap)

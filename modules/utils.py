@@ -34,6 +34,7 @@ def build_palette():
         "AuraFlow": ["AuraFlowRequest"],
         "Chroma": ["ChromaRequest", "ChromaI2IRequest"],
         "Flux": ["FluxRequest", "FluxI2IRequest", "FluxKontextRequest", "FluxInpaintRequest", "FluxFillRequest"],
+        "Flux2": ["Flux2Request", "Flux2I2IRequest"],
         "Framepack": ["FramepackRequest"],
         "HiDream": ["HiDreamRequest"],
         "Hunyuan Video": ["HunyuanVideoRequest"],
@@ -45,7 +46,8 @@ def build_palette():
         "Sana Sprint": ["SanaSprintRequest", "SanaSprintI2IRequest"],
         "SD 1.5": ["SD15Request", "SD15I2IRequest", "SD15InpaintRequest"],
         "SDXL": ["SDXLRequest", "SDXLI2IRequest", "SDXLInpaintRequest"],
-        "Wan": ["WanRequest", "WanV2VRequest", "WanVACERequest"]
+        "Wan": ["WanRequest", "WanV2VRequest", "WanVACERequest"],
+        "ZImage": ["ZImageRequest"]
     }
     types = list(model_map.keys())
     base_colors = generate_distinct_colors(len(types))

@@ -215,11 +215,17 @@ class QwenTab(QWidget):
     @asyncSlot()
     async def make_lora_list(self):
         self.lora_list.clear()
-        response = await self.avernus_client.list_qwen_image_loras()
-        if response["status"] is True:
-            self.lora_list.insertItems(0, response["loras"])
-        else:
-            self.lora_list.insertItems(0, ["NONE"])
+        try:
+            response = await self.avernus_client.list_qwen_image_loras()
+            if response["status"] is True:
+                if len(response["loras"]) == 0:
+                    self.lora_list.insertItems(0, ["NONE"])
+                else:
+                    self.lora_list.insertItems(0, response["loras"])
+            else:
+                self.lora_list.insertItems(0, ["NONE"])
+        except:
+            self.lora_list.insertItems(0, ["LORA LIST ERROR"])
 
     def setup_mutually_exclusive_checkboxes(self):
         self.i2i_image_label.enable_checkbox.toggled.connect(self.on_i2i_checkbox_toggled)
