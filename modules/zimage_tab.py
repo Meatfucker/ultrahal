@@ -39,7 +39,7 @@ class ZImageTab(QWidget):
         self.danbooru_tags_slider = HorizontalSlider("Num Tags", 1, 20, 6, enable_ticks=False)
         self.resolution_widget = ResolutionInput()
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="9")
-        self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="1")
+        self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="0.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
 
