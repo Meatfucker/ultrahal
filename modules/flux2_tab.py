@@ -10,8 +10,8 @@ from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
 from modules.queue import QueueTab
 from modules.request_helpers import BaseImageRequest, QueueObjectWidget
-from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget, ParagraphInputBox,
-                                QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
+from modules.ui_widgets import (HorizontalSlider, ImageGallery, ImageInputBox, ModelPickerWidget, MultiImageInputBox,
+                                ParagraphInputBox, QueueViewer, ResolutionInput, SingleLineInputBox, VerticalTabWidget)
 from modules.utils import base64_to_images, image_to_base64, get_random_artist_prompt, get_generic_danbooru_tags, get_enhanced_prompt
 
 
@@ -54,7 +54,7 @@ class Flux2Tab(QWidget):
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="4.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
-        self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
+        self.i2i_image_label = MultiImageInputBox(self, "i2i", orientation=Qt.Vertical)
 
         self.main_layout = QHBoxLayout()
         self.config_widgets_layout = QVBoxLayout()
@@ -74,7 +74,7 @@ class Flux2Tab(QWidget):
         self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
-        self.main_layout.addLayout(self.i2i_image_label)
+        self.main_layout.addWidget(self.i2i_image_label)
         self.main_layout.addLayout(self.config_widgets_layout, stretch=2)
         self.setLayout(self.main_layout)
 
@@ -96,7 +96,7 @@ class Flux2Tab(QWidget):
                 lora_name.append(lora_list_item.text())
         i2i_image_enable = self.i2i_image_label.enable_checkbox.isChecked()
         if i2i_image_enable is True:
-            i2i_image = self.i2i_image_label.input_image
+            i2i_image = self.i2i_image_label.get_images()
         else:
             i2i_image = None
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
@@ -179,7 +179,7 @@ class Flux2Request(BaseImageRequest):
                  i2i_image_enabled: bool,
                  guidance_scale: str,
                  seed: str,
-                 i2i_image: QPixmap,
+                 i2i_image,
                  enhance_prompt: bool,
                  add_artist: bool,
                  add_danbooru_tags: bool,
@@ -225,10 +225,13 @@ class Flux2Request(BaseImageRequest):
         if self.height is not None: kwargs["height"] = int(self.height)
 
         if self.i2i_image_enabled:
-            i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-            self.i2i_image.save(i2i_temp_file.name, quality=100)
-            image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
-            kwargs["image"] = str(image)
+            input_images = []
+            for input_image in self.i2i_image:
+                i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
+                input_image.save(i2i_temp_file.name, quality=100)
+                image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
+                input_images.append(str(image))
+            kwargs["image"] = input_images
         if self.enhance_prompt:
             llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt)
             self.enhanced_prompt = llm_prompt
@@ -258,7 +261,7 @@ class Flux2Request(BaseImageRequest):
 class Flux2I2IRequest(Flux2Request):
     def __init__(self, avernus_client: AvernusClient, gallery: ImageGallery, tabs: VerticalTabWidget, prompt: str,
                  width: str, height: str, steps: str, batch_size: str, lora_name: list, i2i_image_enabled: bool,
-                 guidance_scale: str, seed: str, i2i_image: QPixmap, enhance_prompt: bool, add_artist: bool,
+                 guidance_scale: str, seed: str, i2i_image, enhance_prompt: bool, add_artist: bool,
                  add_danbooru_tags: bool, danbooru_tags_amount: int, model_name: str):
         super().__init__(avernus_client, gallery, tabs, prompt, width, height, steps, batch_size, lora_name,
                          i2i_image_enabled, guidance_scale, seed, i2i_image, enhance_prompt, add_artist,

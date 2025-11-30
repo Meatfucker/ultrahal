@@ -583,6 +583,103 @@ class ModelPickerWidget(QHBoxLayout):
             self.data_list.remove(model_name)
             self._save_model_list()
 
+class MultiImageInputBox(QWidget):
+    def __init__(
+        self,
+        source_widget,
+        name="Images",
+        orientation=Qt.Horizontal,
+        thumb_size=96,
+    ):
+        super().__init__()
+
+        self.source_widget = source_widget
+        self.orientation = orientation
+        self.thumb_size = thumb_size
+        self.images = []
+
+        # ---- Controls ----
+        self.enable_checkbox = QCheckBox(f"Enable {name}")
+        self.paste_button = QPushButton("Paste")
+        self.load_button = QPushButton("Load")
+
+        self.paste_button.clicked.connect(self.paste_image)
+        self.load_button.clicked.connect(self.load_images)
+
+        controls = QHBoxLayout()
+        controls.addWidget(self.enable_checkbox)
+        controls.addStretch()
+        controls.addWidget(self.paste_button)
+        controls.addWidget(self.load_button)
+
+        # ---- Thumbnail layout ----
+        if orientation == Qt.Horizontal:
+            self.thumb_layout = QHBoxLayout()
+            self.thumb_layout.setAlignment(Qt.AlignLeft)
+        else:
+            self.thumb_layout = QVBoxLayout()
+            self.thumb_layout.setAlignment(Qt.AlignTop)
+
+        self.thumb_layout.setSpacing(8)
+
+        container = QWidget()
+        container.setLayout(self.thumb_layout)
+
+        # ---- Scroll area ----
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+
+        if orientation == Qt.Horizontal:
+            self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        else:
+            self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        self.scroll.setWidget(container)
+
+        # ---- Main layout ----
+        main_layout = QVBoxLayout(self)
+        main_layout.addLayout(controls)
+        main_layout.addWidget(self.scroll)
+
+    def add_pixmap(self, pixmap):
+        if pixmap.isNull():
+            return
+
+        self.images.append(pixmap)
+
+        thumb = ThumbnailWidget(pixmap, size=self.thumb_size)
+        thumb.removed.connect(self.remove_thumbnail)
+        self.thumb_layout.addWidget(thumb)
+
+    def remove_thumbnail(self, thumb_widget):
+        index = self.thumb_layout.indexOf(thumb_widget)
+        if index != -1:
+            self.images.pop(index)
+            thumb_widget.setParent(None)
+            thumb_widget.deleteLater()
+
+    def load_images(self):
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Open Images",
+            "~",
+            "Image Files (*.png *.jpg *.jpeg *.webp)"
+        )
+        for file in files:
+            self.add_pixmap(QPixmap(file))
+
+    def paste_image(self):
+        clipboard = QApplication.clipboard()
+        mimedata = clipboard.mimeData()
+        if mimedata.hasImage():
+            self.add_pixmap(QPixmap(mimedata.imageData()))
+
+    def get_images(self):
+        """Returns a list of QPixmaps currently loaded"""
+        return self.images.copy()
+
 
 class OutpaintingWidget(QWidget):
     def __init__(self):
@@ -1062,6 +1159,31 @@ class SquareButton(QPushButton):
         font = QFont()
         font.setPointSize(font_size)
         self.setFont(font)
+
+class ThumbnailWidget(QWidget):
+    removed = Signal(QWidget)
+
+    def __init__(self, pixmap, size=96):
+        super().__init__()
+        self.pixmap = pixmap
+
+        self.image_label = QLabel()
+        self.image_label.setPixmap(
+            pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
+        self.image_label.setAlignment(Qt.AlignCenter)
+
+        self.remove_button = QPushButton("✕")
+        self.remove_button.setFixedSize(20, 20)
+        self.remove_button.clicked.connect(self._on_remove)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.remove_button, alignment=Qt.AlignRight)
+        layout.addWidget(self.image_label)
+
+    def _on_remove(self):
+        self.removed.emit(self)
 
 class VerticalTabWidget(QWidget):
     def __init__(self, parent=None):
