@@ -1463,7 +1463,7 @@ def show_context_menu(tabs, pixmap):
         flux_fill_tab.paint_area.set_image(pixmap)
 
     if action == flux2_send_to_i2i:
-        flux2_tab.i2i_image_label.load_pixmap(pixmap)
+        flux2_tab.i2i_image_label.add_pixmap(pixmap)
 
     if action == framepack_send_to_first_frame:
         framepack_tab.first_frame_label.load_pixmap(pixmap)
