@@ -55,7 +55,7 @@ class ZImageTab(QWidget):
         self.config_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_layout.addWidget(self.add_random_artist_checkbox)
         self.config_layout.addWidget(self.add_random_danbooru_tags_checkbox)
-        self.config_layout.addLayout(self.danbooru_tags_slider)
+        self.config_layout.addWidget(self.danbooru_tags_slider)
         self.config_layout.addWidget(self.resolution_widget)
         self.config_layout.addLayout(self.steps_label)
         self.config_layout.addLayout(self.batch_size_label)

@@ -59,7 +59,6 @@ class QwenTab(QWidget):
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
         self.edit_image_label = ImageInputBox(self, "Edit", "assets/chili.png")
-        self.edit_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
 
         self.main_layout = QHBoxLayout()
         self.input_layout = QVBoxLayout()
@@ -77,7 +76,7 @@ class QwenTab(QWidget):
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
-        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
+        self.config_widgets_layout.addWidget(self.danbooru_tags_slider)
         self.config_widgets_layout.addWidget(self.enable_nunchaku_checkbox)
         self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
@@ -90,7 +89,7 @@ class QwenTab(QWidget):
         self.image_input_layout.addLayout(self.edit_layout)
 
         self.i2i_layout.addLayout(self.i2i_image_label)
-        self.i2i_layout.addLayout(self.i2i_strength_label)
+        self.i2i_layout.addWidget(self.i2i_strength_label)
         self.edit_layout.addLayout(self.edit_image_label)
 
         self.input_layout.addLayout(self.prompt_layout, stretch=1)

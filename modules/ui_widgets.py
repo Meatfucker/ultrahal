@@ -129,26 +129,48 @@ class Console(QWidget):
     def flush(self):
         pass
 
-class HorizontalSlider(QHBoxLayout):
-    def __init__(self, label, min, max, default=1, interval=1, enable_ticks=True):
-        super().__init__()
+class HorizontalSlider(QWidget):
+    valueChanged = Signal(int)
+
+    def __init__(self,
+                 label: str,
+                 minimum: int,
+                 maximum: int,
+                 default: int = 1,
+                 interval: int = 1,
+                 enable_ticks: bool = True,
+                 parent: QWidget | None = None):
+        super().__init__(parent)
+
+        layout = QHBoxLayout(self)
+
         self.label = QLabel(f"{label}:")
+        self.value_label = QLabel(str(default))
+
         self.slider = QSlider(Qt.Horizontal)
-        self.slider.setMinimum(min)
-        self.slider.setMaximum(max)
+        self.slider.setRange(minimum, maximum)
+        self.slider.setValue(default)
+
         if enable_ticks:
             self.slider.setTickPosition(QSlider.TickPosition.TicksBothSides)
             self.slider.setTickInterval(interval)
-        self.slider.setValue(default)
-        self.slider.valueChanged.connect(self.update_value)
-        self.value_label = QLabel(f"{self.slider.value()}")
 
-        self.addWidget(self.label)
-        self.addWidget(self.value_label)
-        self.addWidget(self.slider)
+        self.slider.valueChanged.connect(self._update_value)
+        self.slider.valueChanged.connect(self.valueChanged)
 
-    def update_value(self):
-        self.value_label.setText(f"{self.slider.value()}")
+        layout.addWidget(self.label)
+        layout.addWidget(self.value_label)
+        layout.addWidget(self.slider)
+
+    def _update_value(self, value: int):
+        self.value_label.setText(str(value))
+
+    def value(self) -> int:
+        return self.slider.value()
+
+    def setValue(self, value: int):
+        self.slider.setValue(value)
+
 
 class ImageGallery(QVBoxLayout):
     def __init__(self, parent):
@@ -161,7 +183,7 @@ class ImageGallery(QVBoxLayout):
         self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
 
         config_layout = QHBoxLayout()
-        config_layout.addLayout(self.column_slider)
+        config_layout.addWidget(self.column_slider)
         config_layout.addWidget(self.clear_gallery_button)
         self.addLayout(config_layout)
         self.addWidget(self.gallery)
@@ -182,7 +204,7 @@ class ImageGalleryGrid(QGridLayout):
         self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
 
         config_layout = QHBoxLayout()
-        config_layout.addLayout(self.column_slider)
+        config_layout.addWidget(self.column_slider)
         config_layout.addWidget(self.clear_gallery_button)
         self.addLayout(config_layout, 0, 0)
         self.addWidget(self.gallery, 1, 0,)

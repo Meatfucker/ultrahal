@@ -80,7 +80,7 @@ class FluxTab(QWidget):
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
-        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
+        self.config_widgets_layout.addWidget(self.danbooru_tags_slider)
         self.config_widgets_layout.addWidget(self.resolution_widget)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
@@ -94,9 +94,9 @@ class FluxTab(QWidget):
         self.image_input_layout.addLayout(self.kontext_layout)
 
         self.i2i_layout.addLayout(self.i2i_image_label)
-        self.i2i_layout.addLayout(self.i2i_strength_label)
+        self.i2i_layout.addWidget(self.i2i_strength_label)
         self.ip_adapter_layout.addLayout(self.ipadapter_image_label)
-        self.ip_adapter_layout.addLayout(self.ipadapter_strength_label)
+        self.ip_adapter_layout.addWidget(self.ipadapter_strength_label)
         self.kontext_layout.addLayout(self.kontext_image_label)
 
         self.input_layout.addLayout(self.prompt_layout, stretch=1)

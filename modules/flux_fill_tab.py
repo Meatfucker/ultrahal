@@ -72,9 +72,9 @@ class FluxFillTab(QWidget):
         self.paint_layout.addWidget(self.paint_area)
 
         # self.prompt_layout.addWidget(self.lora_list) Loras seem to have no effect though they load. Disabled for now
-        self.config_layout.addLayout(self.brush_size_slider)
+        self.config_layout.addWidget(self.brush_size_slider)
         self.config_layout.addWidget(self.load_button)
-        self.config_layout.addLayout(self.strength_slider)
+        self.config_layout.addWidget(self.strength_slider)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addWidget(self.outpainting_controls)
         self.config_layout.addLayout(self.prompt_label)
@@ -83,7 +83,7 @@ class FluxFillTab(QWidget):
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_artist_checkbox)
         self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
-        self.config_widgets_layout.addLayout(self.danbooru_tags_slider)
+        self.config_widgets_layout.addWidget(self.danbooru_tags_slider)
         self.config_widgets_layout.addLayout(self.steps_label)
         self.config_widgets_layout.addLayout(self.batch_size_label)
         self.config_widgets_layout.addLayout(self.guidance_scale_label)

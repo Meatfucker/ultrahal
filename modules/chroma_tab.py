@@ -68,7 +68,7 @@ class ChromaTab(QWidget):
         self.prompt_layout.setAlignment(Qt.AlignTop)
 
         self.input_layout.addLayout(self.i2i_image_label)
-        self.input_layout.addLayout(self.i2i_strength_label)
+        self.input_layout.addWidget(self.i2i_strength_label)
 
         self.prompt_layout.addLayout(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
@@ -79,7 +79,7 @@ class ChromaTab(QWidget):
         self.prompt_layout.addWidget(self.prompt_enhance_checkbox)
         self.prompt_layout.addWidget(self.add_random_artist_checkbox)
         self.prompt_layout.addWidget(self.add_random_danbooru_tags_checkbox)
-        self.prompt_layout.addLayout(self.danbooru_tags_slider)
+        self.prompt_layout.addWidget(self.danbooru_tags_slider)
         self.prompt_layout.addWidget(self.resolution_widget)
         self.prompt_layout.addLayout(self.steps_label)
         self.prompt_layout.addLayout(self.batch_size_label)
