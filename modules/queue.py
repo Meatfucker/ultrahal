@@ -14,6 +14,6 @@ class QueueTab(QWidget):
         self.console: Console = Console()
         self.queue_view: QueueViewer = QueueViewer()
         self.main_layout: QHBoxLayout = QHBoxLayout()
-        self.main_layout.addLayout(self.console, stretch=1)
+        self.main_layout.addWidget(self.console, stretch=1)
         self.main_layout.addWidget(self.queue_view, stretch=3)
         self.setLayout(self.main_layout)

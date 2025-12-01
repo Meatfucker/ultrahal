@@ -108,20 +108,23 @@ class CircleWidget(QWidget):
 
         painter.drawEllipse(x, y, diameter, diameter)
 
+class Console(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-
-
-
-class Console(QHBoxLayout):
-    def __init__(self):
-        super().__init__()
-        self.text_display = QTextEdit(readOnly=True)
+        self.text_display = QTextEdit(self)
+        self.text_display.setReadOnly(True)
         self.text_display.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        self.addWidget(self.text_display)
+
+        layout = QHBoxLayout(self)
+        layout.addWidget(self.text_display)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         sys.stdout = self
 
     def write(self, message):
         self.text_display.insertPlainText(message)
+        self.text_display.ensureCursorVisible()
 
     def flush(self):
         pass
