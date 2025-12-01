@@ -39,7 +39,7 @@ class LlmTab(QWidget):
         config_layout.addWidget(self.submit_button)
 
         self.setLayout(main_layout)
-        self.setStyleSheet("""QTextEdit {border: 2px solid solid; 
+        self.setStyleSheet("""QTextEdit {border: 1px solid solid; 
                                          border-color: #28282f;
                                          background-color: #2c2c31; 
                                          color: #ddd; 

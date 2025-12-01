@@ -329,61 +329,60 @@ class ImageInputBox(QWidget):
             pixmap = QPixmap(mimedata.imageData())
             self.load_pixmap(pixmap)
 
-class LLMHistoryWidget(QScrollArea):
-    def __init__(self, tab):
-        super().__init__()
+class LLMHistoryWidget(QWidget):
+    def __init__(self, tab, parent=None):
+        super().__init__(parent)
         self.tab = tab
         self.messages = []
-        self.container_widget = QWidget()
-        self.setWidget(self.container_widget)
-        self.setWidgetResizable(True)
 
-        self.main_layout = QVBoxLayout(self.container_widget)
-        self.main_layout.setAlignment(Qt.AlignTop)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)  # tiny gap between messages
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
 
+        self.container = QWidget()
+        self.scroll_area.setWidget(self.container)
 
-        self.verticalScrollBar().rangeChanged.connect(
-            lambda min_val, max_val: self.verticalScrollBar().setValue(max_val)
+        self.layout = QVBoxLayout(self.container)
+        self.layout.setAlignment(Qt.AlignTop)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(
+            lambda _, max_val: self.scroll_area.verticalScrollBar().setValue(max_val)
         )
+
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.addWidget(self.scroll_area)
+
         self.setStyleSheet("""
-                 border: none;
-                 background-color: #2c2c31;
-                 color: #ddd;
-                 font-size: 14px;
-                 border: 2px solid solid;
-                 border-color: #28282f;
-                 border-radius: 8px; /* rounded corners */
-                 """)
+            background-color: #2c2c31;
+            color: #ddd;
+            font-size: 14px;
+            border: 1px solid #28282f;
+            border-radius: 8px;
+        """)
 
     def add_message(self, role, message, hex_color):
-        message_item = LLMHistoryObjectWidget(role, message, hex_color)
-        self.main_layout.addWidget(message_item)
-        self.messages.append(message_item)
-        message_item.removeRequested.connect(self.handle_remove_request)
-        message_item.rerollRequested.connect(self.handle_reroll_request)
+        w = LLMHistoryObjectWidget(role, message, hex_color)
+        self.layout.addWidget(w)
+        self.messages.append(w)
+
+        w.removeRequested.connect(self.handle_remove_request)
+        w.rerollRequested.connect(self.handle_reroll_request)
 
     def clear_history(self):
-        while self.main_layout.count():
-            item = self.main_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-                widget.deleteLater()
+        for w in self.messages:
+            w.setParent(None)
+            w.deleteLater()
         self.messages.clear()
 
     def get_history(self):
-        history_list = []
-        for i in range(self.main_layout.count()):
-            item = self.main_layout.itemAt(i)
-            widget = item.widget()
-            if isinstance(widget, LLMHistoryObjectWidget):
-                history_list.append({
-                    "role": widget.role,
-                    "content": widget.message
-                })
-        return history_list
+        return [
+            {"role": w.role, "content": w.message}
+            for w in self.messages
+            if isinstance(w, LLMHistoryObjectWidget)
+        ]
 
     def handle_remove_request(self, widget):
         if widget not in self.messages:
@@ -392,21 +391,19 @@ class LLMHistoryWidget(QScrollArea):
         index = self.messages.index(widget)
 
         if widget.role == "user":
-            # delete user + assistant after
-            widgets_to_delete = [widget]
+            to_remove = [widget]
             if index + 1 < len(self.messages) and self.messages[index + 1].role == "assistant":
-                widgets_to_delete.append(self.messages[index + 1])
-        elif widget.role == "assistant":
-            # delete assistant + user before
-            widgets_to_delete = [widget]
-            if index - 1 >= 0 and self.messages[index - 1].role == "user":
-                widgets_to_delete.insert(0, self.messages[index - 1])
-        else:
-            widgets_to_delete = [widget]  # fallback
+                to_remove.append(self.messages[index + 1])
 
-        # remove widgets
-        for w in widgets_to_delete:
-            self.main_layout.removeWidget(w)
+        elif widget.role == "assistant":
+            to_remove = [widget]
+            if index > 0 and self.messages[index - 1].role == "user":
+                to_remove.insert(0, self.messages[index - 1])
+        else:
+            return
+
+        for w in to_remove:
+            self.layout.removeWidget(w)
             self.messages.remove(w)
             w.setParent(None)
             w.deleteLater()
@@ -416,119 +413,75 @@ class LLMHistoryWidget(QScrollArea):
 
         if widget.role == "user":
             input_text = widget.message
-            remove_from_index = index  # remove this user message and everything after
+            remove_from_index = index
+
         elif widget.role == "assistant":
-            # Reroll assistant → use previous user message
-            if index - 1 >= 0 and self.messages[index - 1].role == "user":
-                input_text = self.messages[index - 1].message
-                remove_from_index = index - 1  # remove that user message and everything after
-            else:
-                # no valid previous user message, cannot reroll
+            if index == 0 or self.messages[index - 1].role != "user":
                 return
+            input_text = self.messages[index - 1].message
+            remove_from_index = index - 1
         else:
-            return  # unknown role, ignore
+            return
 
-        # Build truncated history up to the message BEFORE remove_from_index
-        history = []
-        for i in range(remove_from_index):  # messages before the one being rerolled
-            w = self.messages[i]
-            if isinstance(w, LLMHistoryObjectWidget):
-                history.append({"role": w.role, "content": w.message})
+        history = [
+            {"role": w.role, "content": w.message}
+            for w in self.messages[:remove_from_index]
+        ]
 
-        # Remove widgets from remove_from_index onward
         for w in self.messages[remove_from_index:]:
-            self.main_layout.removeWidget(w)
+            self.layout.removeWidget(w)
             w.setParent(None)
             w.deleteLater()
 
-        # Keep only the truncated messages
         self.messages = self.messages[:remove_from_index]
-
-        # Call reroll
         self.tab.on_reroll(input_text, history)
 
 class LLMHistoryObjectWidget(QFrame):
     removeRequested = Signal(object)
     rerollRequested = Signal(object)
-    def __init__(self, role, message, hex_color):
-        super().__init__()
-        self.role = role
-        self.message = message
-        self.hex_color = hex_color
 
-        # make the frame hug its contents tightly
+    def __init__(self, role, message, hex_color, parent=None):
+        super().__init__(parent)
+
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setLineWidth(0)
-        self.setMidLineWidth(0)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
-        self.main_layout = QHBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)  # small horizontal gap
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
 
-        # --- prompt container ---
-        self.prompt_layout = QVBoxLayout()
-        self.prompt_layout.setAlignment(Qt.AlignTop)
-        self.prompt_layout.setContentsMargins(0, 0, 0, 0)  # padding inside bubble
-        self.prompt_layout.setSpacing(0)
+        self._prompt_widget = PromptBubbleWidget(role, message, hex_color)
+        self._buttons_widget = PromptButtonsWidget()
 
-        self.prompt_container = QWidget()
-        self.prompt_container.setStyleSheet(
-            f"color: #ffffff; background-color: {self.hex_color}; border-radius: 6px;"
+        self._buttons_widget.removeRequested.connect(
+            lambda: self.removeRequested.emit(self)
         )
-        self.prompt_container.setLayout(self.prompt_layout)
-
-        # --- buttons ---
-        self.button_layout = QVBoxLayout()
-        self.button_layout.setContentsMargins(0, 0, 0, 0)
-        self.button_layout.setSpacing(2)
-
-        self.remove_button = QPushButton("❌")
-        self.remove_button.setFixedSize(28, 28)
-        self.remove_button.setStyleSheet("margin: 0; padding: 0;")
-        self.remove_button.clicked.connect(self.remove_from_history)
-
-        self.reroll_button = QPushButton("↻")
-        self.reroll_button.setFixedSize(28, 28)
-        self.reroll_button.setStyleSheet("margin: 0; padding: 0;")
-        self.reroll_button.clicked.connect(self.reroll)
-
-        # --- labels ---
-        self.type_label = WordWrapLabel(self.role)
-        self.type_label.setContentsMargins(0, 0, 0, 0)
-        self.type_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.type_label.setWordWrap(True)
-
-        self.prompt_separator = QFrame(
-            frameShape=QFrame.Shape.HLine,
-            frameShadow=QFrame.Shadow.Plain
+        self._buttons_widget.rerollRequested.connect(
+            lambda: self.rerollRequested.emit(self)
         )
-        self.prompt_separator.setFixedHeight(1)
-        self.prompt_separator.setStyleSheet("background-color: #888888; margin: 0;")
 
-        self.prompt_label = WordWrapLabel(self.message)
-        self.prompt_label.setContentsMargins(0, 0, 0, 0)
-        self.prompt_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.prompt_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.prompt_label.setWordWrap(True)
+        layout.addWidget(self._prompt_widget)
+        layout.addWidget(self._buttons_widget)
 
-        # --- assemble layouts ---
-        self.main_layout.addWidget(self.prompt_container)
-        self.main_layout.addLayout(self.button_layout)
+    @property
+    def role(self):
+        return self._prompt_widget.role
 
-        self.prompt_layout.addWidget(self.type_label)
-        self.prompt_layout.addWidget(self.prompt_separator)
-        self.prompt_layout.addWidget(self.prompt_label)
+    @role.setter
+    def role(self, value):
+        self._prompt_widget.role = value
 
-        self.button_layout.addWidget(self.remove_button)
-        self.button_layout.addWidget(self.reroll_button)
-        self.button_layout.addStretch()
+    @property
+    def message(self):
+        return self._prompt_widget.message
 
-    def reroll(self):
-        self.rerollRequested.emit(self)
+    @message.setter
+    def message(self, value):
+        self._prompt_widget.message = value
 
-    def remove_from_history(self):
-        self.removeRequested.emit(self)
+    @property
+    def hex_color(self):
+        return self._prompt_widget.hex_color
 
 
 class ModelPickerWidget(QHBoxLayout):
@@ -917,6 +870,87 @@ class ParagraphInputBox(QVBoxLayout):
                  border-radius: 8px; /* rounded corners */
              }
          """)
+
+class PromptBubbleWidget(QWidget):
+    def __init__(self, role, message, hex_color, parent=None):
+        super().__init__(parent)
+
+        self._hex_color = hex_color
+
+        self.setStyleSheet(
+            f"""
+            background-color: {hex_color};
+            color: #ffffff;
+            border-radius: 1px;
+            """
+        )
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.setAlignment(Qt.AlignTop)
+
+        self.type_label = WordWrapLabel(role)
+        self.type_label.setWordWrap(True)
+
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: #888888;")
+
+        self.message_label = WordWrapLabel(message)
+        self.message_label.setWordWrap(True)
+        self.message_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        layout.addWidget(self.type_label)
+        layout.addWidget(separator)
+        layout.addWidget(self.message_label)
+
+    # ---- Public API ----
+
+    @property
+    def role(self):
+        return self.type_label.text()
+
+    @role.setter
+    def role(self, value):
+        self.type_label.setText(value)
+
+    @property
+    def message(self):
+        return self.message_label.text()
+
+    @message.setter
+    def message(self, value):
+        self.message_label.setText(value)
+
+    @property
+    def hex_color(self):
+        return self._hex_color
+
+
+class PromptButtonsWidget(QWidget):
+    removeRequested = Signal()
+    rerollRequested = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self.remove_button = QPushButton("❌")
+        self.remove_button.setFixedSize(28, 28)
+        self.remove_button.clicked.connect(self.removeRequested)
+
+        self.reroll_button = QPushButton("↻")
+        self.reroll_button.setFixedSize(28, 28)
+        self.reroll_button.clicked.connect(self.rerollRequested)
+
+        layout.addWidget(self.remove_button)
+        layout.addWidget(self.reroll_button)
+        layout.addStretch()
 
 class PromptManager(QObject):
     promptsUpdated = Signal(list)
