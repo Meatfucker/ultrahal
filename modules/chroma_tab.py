@@ -67,7 +67,7 @@ class ChromaTab(QWidget):
         self.prompt_layout = QVBoxLayout()
         self.prompt_layout.setAlignment(Qt.AlignTop)
 
-        self.input_layout.addLayout(self.i2i_image_label)
+        self.input_layout.addWidget(self.i2i_image_label)
         self.input_layout.addWidget(self.i2i_strength_label)
 
         self.prompt_layout.addLayout(self.model_picker)

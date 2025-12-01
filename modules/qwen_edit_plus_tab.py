@@ -82,9 +82,9 @@ class QwenEditPlusTab(QWidget):
         self.config_widgets_layout.addLayout(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
-        self.image_input_layout.addLayout(self.edit_image_1_label)
-        self.image_input_layout.addLayout(self.edit_image_2_label)
-        self.image_input_layout.addLayout(self.edit_image_3_label)
+        self.image_input_layout.addWidget(self.edit_image_1_label)
+        self.image_input_layout.addWidget(self.edit_image_2_label)
+        self.image_input_layout.addWidget(self.edit_image_3_label)
 
         self.input_layout.addLayout(self.prompt_layout, stretch=1)
         self.input_layout.addLayout(self.image_input_layout, stretch=1)

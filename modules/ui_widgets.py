@@ -172,48 +172,30 @@ class HorizontalSlider(QWidget):
         self.slider.setValue(value)
 
 
-class ImageGallery(QVBoxLayout):
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
+class ImageGallery(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
         self.column_slider = HorizontalSlider("Gallery Columns", 1, 10, 4, 1)
+
         self.clear_gallery_button = QPushButton("Clear Gallery")
-        self.clear_gallery_button.clicked.connect(self.clear_gallery)
-        self.gallery = ImageGalleryViewer(self, self.parent)
+        self.gallery = ImageGalleryViewer(self, parent)
+
         self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
+        self.clear_gallery_button.clicked.connect(self.clear_gallery)
 
         config_layout = QHBoxLayout()
         config_layout.addWidget(self.column_slider)
         config_layout.addWidget(self.clear_gallery_button)
-        self.addLayout(config_layout)
-        self.addWidget(self.gallery)
+
+        main_layout = QVBoxLayout(self)
+        main_layout.addLayout(config_layout)
+        main_layout.addWidget(self.gallery)
 
     def clear_gallery(self):
         self.gallery.gallery.clear()
         self.gallery.tile_images()
         self.update()
-
-class ImageGalleryGrid(QGridLayout):
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
-        self.column_slider = HorizontalSlider("Gallery Columns", 1, 10, 4, 1)
-        self.clear_gallery_button = QPushButton("Clear Gallery")
-        self.clear_gallery_button.clicked.connect(self.clear_gallery)
-        self.gallery = ImageGalleryViewer(self, self.parent)
-        self.column_slider.slider.valueChanged.connect(self.gallery.tile_images)
-
-        config_layout = QHBoxLayout()
-        config_layout.addWidget(self.column_slider)
-        config_layout.addWidget(self.clear_gallery_button)
-        self.addLayout(config_layout, 0, 0)
-        self.addWidget(self.gallery, 1, 0,)
-
-    def clear_gallery(self):
-        self.gallery.gallery.clear()
-        self.gallery.tile_images()
-        self.update()
-
 
 class ImageGalleryViewer(QGraphicsView):
     def __init__(self, top_layout, parent):
@@ -276,59 +258,76 @@ class ImageGalleryViewer(QGraphicsView):
         self.tile_images()  # Fit the image to the window size
 
 
-class ImageInputBox(QHBoxLayout):
-    def __init__(self, source_widget, name="", default_image_path="assets/chili.png"):
-        super().__init__()
+class ImageInputBox(QWidget):
+    def __init__(self, source_widget, name="", default_image_path="assets/chili.png", parent=None):
+        super().__init__(parent)
+
         self.source_widget = source_widget
         self.default_image_path = default_image_path
         self.image_file_path = None
+        self.input_image = None
 
         self.resolution_label = QLabel("")
         self.enable_checkbox = QCheckBox(f"Enable {name}")
+
         self.paste_image_button = QPushButton("Paste")
         self.paste_image_button.clicked.connect(self.paste_image)
-        self.load_image_button = QPushButton("Load")
-        self.load_image_button.clicked.connect(self.load_image)
-        self.image_view = ScalingImageView(self.source_widget.tabs)
-        self.input_image = QPixmap("assets/chili.png")
-        self.image_layout = QVBoxLayout()
-        self.enable_layout = QHBoxLayout()
-        self.enable_layout.addWidget(self.resolution_label)
-        self.enable_layout.addWidget(self.enable_checkbox)
-        self.enable_layout.addWidget(self.paste_image_button)
-        self.enable_layout.addWidget(self.load_image_button)
-        self.image_layout.addLayout(self.enable_layout)
-        self.image_layout.addWidget(self.image_view)
-        self.addLayout(self.image_layout)
-        self.load_image(default_image_path)
 
-    def load_image(self, file_path=None):
-        if file_path is False:
-            self.image_file_path = QFileDialog.getOpenFileName(self.source_widget, str("Open Image"), "~", str("Image Files (*.png *.jpg *.webp)"))[0]
-            if self.image_file_path == "":
-                return
-        else:
-            self.image_file_path = file_path
+        self.load_image_button = QPushButton("Load")
+        self.load_image_button.clicked.connect(self.open_file_dialog)
+
+        self.image_view = ScalingImageView(self.source_widget.tabs)
+
+        enable_layout = QHBoxLayout()
+        enable_layout.addWidget(self.resolution_label)
+        enable_layout.addWidget(self.enable_checkbox)
+        enable_layout.addStretch()
+        enable_layout.addWidget(self.paste_image_button)
+        enable_layout.addWidget(self.load_image_button)
+
+        image_layout = QVBoxLayout()
+        image_layout.addLayout(enable_layout)
+        image_layout.addWidget(self.image_view)
+
+        main_layout = QHBoxLayout(self)
+        main_layout.addLayout(image_layout)
+
+        if default_image_path:
+            self.load_image(default_image_path)
+
+    def open_file_dialog(self):
+        file_path, _ = QFileDialog.getOpenFileName(self,
+                                                   "Open Image",
+                                                   "",
+                                                   "Image Files (*.png *.jpg *.webp)")
+        if file_path:
+            self.load_image(file_path)
+
+    def load_image(self, file_path):
         try:
-            self.input_image = QPixmap(self.image_file_path)
-            self.image_view.add_pixmap(self.input_image)
-            self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
+            self.image_file_path = file_path
+            pixmap = QPixmap(file_path)
+            if pixmap.isNull():
+                return
+
+            self.load_pixmap(pixmap)
         except Exception as e:
             print(e)
 
-    def load_pixmap(self, pixmap=None):
+    def load_pixmap(self, pixmap: QPixmap):
         self.input_image = pixmap
-        self.image_view.add_pixmap(self.input_image)
-        self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
-
+        self.image_view.add_pixmap(pixmap)
+        self.resolution_label.setText(
+            f"{pixmap.width()}×{pixmap.height()}"
+        )
 
     def paste_image(self):
         clipboard = QApplication.clipboard()
         mimedata = clipboard.mimeData()
+
         if mimedata.hasImage():
-            self.input_image = QPixmap(mimedata.imageData())
-            self.image_view.add_pixmap(self.input_image)
-            self.resolution_label.setText(f"{self.input_image.width()}x{self.input_image.height()}")
+            pixmap = QPixmap(mimedata.imageData())
+            self.load_pixmap(pixmap)
 
 class LLMHistoryWidget(QScrollArea):
     def __init__(self, tab):

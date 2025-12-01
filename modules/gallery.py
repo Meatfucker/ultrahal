@@ -12,5 +12,5 @@ class GalleryTab(QWidget):
         self.ultrahal = ultrahal
         self.gallery = ImageGallery(self)
         self.main_layout = QHBoxLayout()
-        self.main_layout.addLayout(self.gallery, stretch=6)
+        self.main_layout.addWidget(self.gallery, stretch=6)
         self.setLayout(self.main_layout)

@@ -39,7 +39,7 @@ class ImageProcessorTab(QWidget):
         self.config_widget.main_layout.setAlignment(Qt.AlignBottom)
 
         selector_layout.addWidget(self.processor_selector)
-        selector_layout.addLayout(self.input_image)
+        selector_layout.addWidget(self.input_image)
 
         self.main_layout.addLayout(selector_layout, stretch=10)
         self.main_layout.addWidget(self.config_widget)

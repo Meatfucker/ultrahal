@@ -93,11 +93,11 @@ class FluxTab(QWidget):
         self.image_input_layout.addLayout(self.ip_adapter_layout)
         self.image_input_layout.addLayout(self.kontext_layout)
 
-        self.i2i_layout.addLayout(self.i2i_image_label)
+        self.i2i_layout.addWidget(self.i2i_image_label)
         self.i2i_layout.addWidget(self.i2i_strength_label)
-        self.ip_adapter_layout.addLayout(self.ipadapter_image_label)
+        self.ip_adapter_layout.addWidget(self.ipadapter_image_label)
         self.ip_adapter_layout.addWidget(self.ipadapter_strength_label)
-        self.kontext_layout.addLayout(self.kontext_image_label)
+        self.kontext_layout.addWidget(self.kontext_image_label)
 
         self.input_layout.addLayout(self.prompt_layout, stretch=1)
         self.input_layout.addLayout(self.image_input_layout, stretch=1)

@@ -97,11 +97,11 @@ class SdxlTab(QWidget):
         self.image_input_layout.addLayout(self.ip_adapter_layout)
         self.image_input_layout.addLayout(self.controlnet_layout)
 
-        self.i2i_layout.addLayout(self.i2i_image_label)
+        self.i2i_layout.addWidget(self.i2i_image_label)
         self.i2i_layout.addWidget(self.i2i_strength_label)
-        self.ip_adapter_layout.addLayout(self.ipadapter_image_label)
+        self.ip_adapter_layout.addWidget(self.ipadapter_image_label)
         self.ip_adapter_layout.addWidget(self.ipadapter_strength_label)
-        self.controlnet_layout.addLayout(self.controlnet_image_label)
+        self.controlnet_layout.addWidget(self.controlnet_image_label)
         self.controlnet_layout.addWidget(self.controlnet_list)
         self.controlnet_layout.addWidget(self.controlnet_conditioning_scale)
 

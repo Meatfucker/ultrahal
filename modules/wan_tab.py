@@ -50,7 +50,7 @@ class WanTab(QWidget):
         image_layout.setAlignment(Qt.AlignTop)
         input_layout = QVBoxLayout()
         input_layout.setAlignment(Qt.AlignTop)
-        image_layout.addLayout(self.i2v_image_label)
+        image_layout.addWidget(self.i2v_image_label)
         image_layout.addWidget(self.v2v_video_label, stretch=1)
         input_layout.addLayout(self.model_picker_t2v)
         input_layout.addLayout(self.model_picker_i2v)
