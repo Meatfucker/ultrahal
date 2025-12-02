@@ -859,24 +859,30 @@ class PainterWidget(QWidget):
         super().leaveEvent(event)
 
 
-class ParagraphInputBox(QVBoxLayout):
-    def __init__(self, label):
-        super().__init__()
+class ParagraphInputBox(QWidget):
+    def __init__(self, label: str, parent=None):
+        super().__init__(parent)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
         self.label = QLabel(label)
-        self.addWidget(self.label)
-        self.input = QTextEdit(acceptRichText=False)
-        self.addWidget(self.input)
+        layout.addWidget(self.label)
+
+        self.input = QTextEdit()
+        self.input.setAcceptRichText(False)
+        layout.addWidget(self.input)
+
         self.input.setStyleSheet("""
-             QTextEdit {
-                 border: none;
-                 background-color: #2c2c31;
-                 color: #ddd;
-                 font-size: 14px;
-                 border: 2px solid solid;
-                 border-color: #28282f;
-                 border-radius: 8px; /* rounded corners */
-             }
-         """)
+            QTextEdit {
+                background-color: #2c2c31;
+                color: #ddd;
+                font-size: 14px;
+                border: 2px solid #28282f;
+                border-radius: 8px;
+            }
+        """)
 
 class PromptBubbleWidget(QWidget):
     def __init__(self, role, message, hex_color, parent=None):

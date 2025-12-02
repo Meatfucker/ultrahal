@@ -85,8 +85,8 @@ class SdxlInpaintTab(QWidget):
         self.config_layout.addWidget(self.paste_button)
         self.config_layout.addWidget(self.load_button)
         self.config_layout.addWidget(self.strength_slider)
-        self.config_layout.addLayout(self.prompt_label)
-        self.config_layout.addLayout(self.negative_prompt_label)
+        self.config_layout.addWidget(self.prompt_label)
+        self.config_layout.addWidget(self.negative_prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
 
 

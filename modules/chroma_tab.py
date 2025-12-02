@@ -72,9 +72,9 @@ class ChromaTab(QWidget):
 
         self.prompt_layout.addWidget(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
-        self.prompt_layout.addLayout(self.prompt_label)
+        self.prompt_layout.addWidget(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)
-        self.prompt_layout.addLayout(self.negative_prompt_label)
+        self.prompt_layout.addWidget(self.negative_prompt_label)
         self.prompt_layout.addWidget(self.lora_list)
         self.prompt_layout.addWidget(self.prompt_enhance_checkbox)
         self.prompt_layout.addWidget(self.add_random_artist_checkbox)

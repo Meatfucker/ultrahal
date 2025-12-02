@@ -59,7 +59,7 @@ class SanaSprintTab(QWidget):
 
         self.prompt_layout.addWidget(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
-        self.prompt_layout.addLayout(self.prompt_label)
+        self.prompt_layout.addWidget(self.prompt_label)
         self.prompt_layout.addWidget(self.prompt_enhance_checkbox)
         self.prompt_layout.addWidget(self.add_random_artist_checkbox)
         self.prompt_layout.addWidget(self.add_random_danbooru_tags_checkbox)

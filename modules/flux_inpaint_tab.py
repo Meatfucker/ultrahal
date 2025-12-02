@@ -82,8 +82,8 @@ class FluxInpaintTab(QWidget):
         self.config_layout.addWidget(self.strength_slider)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addWidget(self.lora_list)
-        self.config_layout.addLayout(self.prompt_label)
-        self.config_layout.addLayout(self.negative_prompt_label)
+        self.config_layout.addWidget(self.prompt_label)
+        self.config_layout.addWidget(self.negative_prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)

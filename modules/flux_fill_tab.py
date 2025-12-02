@@ -77,7 +77,7 @@ class FluxFillTab(QWidget):
         self.config_layout.addWidget(self.strength_slider)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addWidget(self.outpainting_controls)
-        self.config_layout.addLayout(self.prompt_label)
+        self.config_layout.addWidget(self.prompt_label)
         self.config_layout.addLayout(self.config_widgets_layout)
 
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)

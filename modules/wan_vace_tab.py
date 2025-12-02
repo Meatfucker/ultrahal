@@ -54,8 +54,8 @@ class WanVACETab(QWidget):
 
         input_layout.addLayout(prompt_layout)
         input_layout.addLayout(image_layout)
-        prompt_layout.addLayout(self.prompt_input)
-        prompt_layout.addLayout(self.negative_prompt_input)
+        prompt_layout.addWidget(self.prompt_input)
+        prompt_layout.addWidget(self.negative_prompt_input)
         image_layout.addWidget(self.first_frame_label)
         image_layout.addWidget(self.last_frame_label)
 

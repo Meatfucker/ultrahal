@@ -69,8 +69,8 @@ class QwenTab(QWidget):
         self.i2i_layout = QVBoxLayout()
         self.edit_layout = QVBoxLayout()
 
-        self.prompt_layout.addLayout(self.prompt_label)
-        self.prompt_layout.addLayout(self.negative_prompt_label)
+        self.prompt_layout.addWidget(self.prompt_label)
+        self.prompt_layout.addWidget(self.negative_prompt_label)
 
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)
