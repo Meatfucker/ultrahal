@@ -47,7 +47,7 @@ class AuraFlowTab(QWidget):
         self.prompt_layout = QVBoxLayout()
         self.config_layout = QVBoxLayout()
 
-        self.config_layout.addLayout(self.model_picker)
+        self.config_layout.addWidget(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
         self.prompt_layout.addLayout(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)

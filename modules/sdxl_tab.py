@@ -79,7 +79,7 @@ class SdxlTab(QWidget):
         self.prompt_layout.addLayout(self.prompt_label)
         self.prompt_layout.addLayout(self.negative_prompt_label)
 
-        self.config_widgets_layout.addLayout(self.model_picker)
+        self.config_widgets_layout.addWidget(self.model_picker)
         self.config_widgets_layout.addWidget(self.scheduler_list)
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)

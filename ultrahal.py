@@ -189,6 +189,7 @@ class MainWindow(QWidget):
             await self.qwen_inpaint_tab.make_lora_list()
             await self.chroma_tab.make_lora_list()
             await self.sd15_tab.make_lora_list()
+            await self.sd15_tab.make_scheduler_list()
             await self.sdxl_tab.make_scheduler_list()
             await self.sd15_inpaint_tab.make_lora_list()
             await self.sd15_inpaint_tab.make_scheduler_list()

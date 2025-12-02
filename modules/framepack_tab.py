@@ -58,7 +58,7 @@ class FramepackTab(QWidget):
         image_layout.addWidget(self.first_frame_label)
         image_layout.addWidget(self.last_frame_label)
 
-        config_layout.addLayout(self.model_picker)
+        config_layout.addWidget(self.model_picker)
         config_layout.addLayout(self.frames_input)
         config_layout.addLayout(self.steps_input)
         config_layout.addWidget(self.resolution_input)

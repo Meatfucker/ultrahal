@@ -60,7 +60,7 @@ class Flux2Tab(QWidget):
         self.config_widgets_layout = QVBoxLayout()
         self.config_widgets_layout.setAlignment(Qt.AlignTop)
 
-        self.config_widgets_layout.addLayout(self.model_picker)
+        self.config_widgets_layout.addWidget(self.model_picker)
         self.config_widgets_layout.addLayout(self.prompt_label)
         self.config_widgets_layout.addWidget(self.lora_list)
         self.config_widgets_layout.addWidget(self.prompt_enhance_checkbox)

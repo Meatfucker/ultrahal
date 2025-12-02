@@ -70,7 +70,7 @@ class ChromaTab(QWidget):
         self.input_layout.addWidget(self.i2i_image_label)
         self.input_layout.addWidget(self.i2i_strength_label)
 
-        self.prompt_layout.addLayout(self.model_picker)
+        self.prompt_layout.addWidget(self.model_picker)
         self.prompt_layout.addWidget(self.prompt_picker)
         self.prompt_layout.addLayout(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)

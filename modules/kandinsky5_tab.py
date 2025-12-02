@@ -44,7 +44,7 @@ class Kandinsky5Tab(QWidget):
         input_layout.setAlignment(Qt.AlignTop)
         prompt_layout.addLayout(self.prompt_input)
         prompt_layout.addLayout(self.negative_prompt_input)
-        input_layout.addLayout(self.model_picker)
+        input_layout.addWidget(self.model_picker)
         input_layout.addLayout(self.frames_input)
         input_layout.addLayout(self.steps_input)
         input_layout.addWidget(self.resolution_input)

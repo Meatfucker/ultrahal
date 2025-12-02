@@ -484,72 +484,75 @@ class LLMHistoryObjectWidget(QFrame):
         return self._prompt_widget.hex_color
 
 
-class ModelPickerWidget(QHBoxLayout):
-    def __init__(self, model_arch, label=None):
-        super().__init__()
+class ModelPickerWidget(QWidget):
+    def __init__(self, model_arch, label=None, parent=None):
+        super().__init__(parent)
+
         self.data_list = []
         self.model_arch = model_arch
         self.json_path = f"assets/{self.model_arch}.json"
 
-        # Load or create the JSON file
         if os.path.exists(self.json_path):
             try:
                 with open(self.json_path, "r") as f:
                     self.data_list = json.load(f)
             except json.JSONDecodeError:
-                QMessageBox.warning(None, "Load Error", f"Failed to parse {self.json_path}. Starting fresh.")
+                QMessageBox.warning(self, "Load Error", f"Failed to parse {self.json_path}. Starting fresh.")
                 self.data_list = []
         else:
-            self._save_model_list()  # Create blank file if it doesn't exist
+            self._save_model_list()
+
+        layout = QHBoxLayout(self)
+        layout.addStretch()
+
+        if label is not None:
+            self.model_label = QLabel(label)
+            layout.addWidget(self.model_label)
 
         self.model_list_picker = QComboBox()
         self.model_list_picker.insertItems(0, self.data_list)
         self.model_list_picker.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.model_list_picker.setMaximumWidth(650)        # ⬅️ limit width
+        self.model_list_picker.setMaximumWidth(650)
         self.model_list_picker.setMinimumWidth(120)
         self.model_list_picker.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.addStretch()
-        if label is not None:
-            self.model_label = QLabel(label)
-            self.addWidget(self.model_label)
-        self.addWidget(self.model_list_picker)
+
+        layout.addWidget(self.model_list_picker)
+
         self.add_model_button = QPushButton("+ Model")
-        self.add_model_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.add_model_button.setMaximumWidth(50)
         self.add_model_button.clicked.connect(self.add_model)
+
         self.remove_model_button = QPushButton("- Model")
-        self.remove_model_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.remove_model_button.setMaximumWidth(50)
         self.remove_model_button.clicked.connect(self.remove_model)
-        self.addWidget(self.add_model_button)
-        self.addWidget(self.remove_model_button)
 
-
+        layout.addWidget(self.add_model_button)
+        layout.addWidget(self.remove_model_button)
 
     def add_model(self):
-        text, ok = QInputDialog.getText(None, "Add Model", "Enter model name:")
+        text, ok = QInputDialog.getText(self, "Add Model", "Enter model name:")
         if ok and text.strip():
             model_name = text.strip()
             if model_name in self.data_list:
-                QMessageBox.warning(None, "Duplicate Model", f"'{model_name}' already exists.")
+                QMessageBox.warning(self, "Duplicate Model", f"'{model_name}' already exists.")
                 return
+
             self.data_list.append(model_name)
             self.model_list_picker.addItem(model_name)
             self._save_model_list()
 
-    def _save_model_list(self):
-        with open(self.json_path, "w") as f:
-            json.dump(self.data_list, f, indent=2)
-
     def remove_model(self):
         current_index = self.model_list_picker.currentIndex()
         if current_index == -1:
-            QMessageBox.information(None, "No Selection", "Please select a model to remove.")
+            QMessageBox.information(
+                self, "No Selection",
+                "Please select a model to remove."
+            )
             return
 
         model_name = self.model_list_picker.currentText()
         confirm = QMessageBox.question(
-            None,
+            self,
             "Remove Model",
             f"Are you sure you want to remove '{model_name}'?",
             QMessageBox.Yes | QMessageBox.No
@@ -559,6 +562,10 @@ class ModelPickerWidget(QHBoxLayout):
             self.model_list_picker.removeItem(current_index)
             self.data_list.remove(model_name)
             self._save_model_list()
+
+    def _save_model_list(self):
+        with open(self.json_path, "w") as f:
+            json.dump(self.data_list, f, indent=2)
 
 class MultiImageInputBox(QWidget):
     def __init__(

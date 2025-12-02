@@ -34,7 +34,7 @@ class LlmTab(QWidget):
         main_layout.addLayout(config_layout)
         chat_layout.addWidget(self.history_viewer, stretch=5)
         chat_layout.addWidget(self.text_input, stretch=1)
-        config_layout.addLayout(self.model_picker)
+        config_layout.addWidget(self.model_picker)
         config_layout.addWidget(self.clear_history_button, stretch=1)
         config_layout.addWidget(self.submit_button)
 

@@ -78,7 +78,7 @@ class SdxlInpaintTab(QWidget):
         self.paint_layout.addWidget(self.paint_area)
 
         self.config_layout.addWidget(self.brush_size_slider)
-        self.config_layout.addLayout(self.model_picker)
+        self.config_layout.addWidget(self.model_picker)
         self.config_layout.addWidget(self.scheduler_list)
         self.config_layout.addWidget(self.clear_mask_button)
         self.config_layout.addWidget(self.lora_list)
