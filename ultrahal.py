@@ -42,7 +42,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("UltraHal")
-        self.resize(1280, 800)
+        #self.resize(1280, 800)
         self.avernus_url: str = "localhost"
         self.avernus_port: int = 6969
         self.avernus_client: AvernusClient = AvernusClient(self.avernus_url)

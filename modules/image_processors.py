@@ -81,7 +81,7 @@ class RealESRGANConfig(QWidget):
         self.submit_button.setStyleSheet("""QPushButton {font-size: 20px;}""")
 
         self.main_layout = QVBoxLayout()
-        self.main_layout.addLayout(self.scale_input)
+        self.main_layout.addWidget(self.scale_input)
         self.main_layout.addWidget(self.submit_button)
         self.setLayout(self.main_layout)
 

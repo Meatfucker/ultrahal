@@ -261,7 +261,6 @@ class ImageGalleryViewer(QGraphicsView):
 class ImageInputBox(QWidget):
     def __init__(self, source_widget, name="", default_image_path="assets/chili.png", parent=None):
         super().__init__(parent)
-
         self.source_widget = source_widget
         self.default_image_path = default_image_path
         self.image_file_path = None
@@ -277,11 +276,16 @@ class ImageInputBox(QWidget):
         self.load_image_button.clicked.connect(self.open_file_dialog)
 
         self.image_view = ScalingImageView(self.source_widget.tabs)
+        self.setMinimumWidth(0)
+        self.image_view.setMinimumWidth(0)
+        self.image_view.setSizePolicy(
+            QSizePolicy.Expanding,
+            QSizePolicy.Preferred
+        )
 
         enable_layout = QHBoxLayout()
         enable_layout.addWidget(self.resolution_label)
         enable_layout.addWidget(self.enable_checkbox)
-        enable_layout.addStretch()
         enable_layout.addWidget(self.paste_image_button)
         enable_layout.addWidget(self.load_image_button)
 
@@ -294,6 +298,7 @@ class ImageInputBox(QWidget):
 
         if default_image_path:
             self.load_image(default_image_path)
+
 
     def open_file_dialog(self):
         file_path, _ = QFileDialog.getOpenFileName(self,
@@ -503,7 +508,7 @@ class ModelPickerWidget(QWidget):
             self._save_model_list()
 
         layout = QHBoxLayout(self)
-        layout.addStretch()
+        #layout.addStretch()
 
         if label is not None:
             self.model_label = QLabel(label)
@@ -592,7 +597,7 @@ class MultiImageInputBox(QWidget):
 
         controls = QHBoxLayout()
         controls.addWidget(self.enable_checkbox)
-        controls.addStretch()
+        #controls.addStretch()
         controls.addWidget(self.paste_button)
         controls.addWidget(self.load_button)
 
@@ -717,7 +722,7 @@ class OutpaintingWidget(QWidget):
         self.button_layout.addWidget(self.align_southeast_button, 2, 2)
 
         self.config_layout.addWidget(self.enable_outpainting_checkbox)
-        self.config_layout.addLayout(self.expand_pixels_input)
+        self.config_layout.addWidget(self.expand_pixels_input)
 
         self.main_layout.addLayout(self.config_layout)
         self.main_layout.addLayout(self.button_layout)
@@ -863,6 +868,8 @@ class ParagraphInputBox(QWidget):
     def __init__(self, label: str, parent=None):
         super().__init__(parent)
 
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
@@ -872,6 +879,12 @@ class ParagraphInputBox(QWidget):
 
         self.input = QTextEdit()
         self.input.setAcceptRichText(False)
+
+        # let the editor shrink
+        self.input.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
+        self.input.setMinimumWidth(0)
+        self.setMinimumWidth(0)
+
         layout.addWidget(self.input)
 
         self.input.setStyleSheet("""
@@ -883,6 +896,9 @@ class ParagraphInputBox(QWidget):
                 border-radius: 8px;
             }
         """)
+
+        # Optional: encourage small default height, but DON'T lock it
+        self.setMinimumHeight(self.label.sizeHint().height() + 10)
 
 class PromptBubbleWidget(QWidget):
     def __init__(self, role, message, hex_color, parent=None):
@@ -963,7 +979,7 @@ class PromptButtonsWidget(QWidget):
 
         layout.addWidget(self.remove_button)
         layout.addWidget(self.reroll_button)
-        layout.addStretch()
+        #layout.addStretch()
 
 class PromptManager(QObject):
     promptsUpdated = Signal(list)
@@ -1034,7 +1050,7 @@ class PromptPickerWidget(QWidget):
         self.combo.setMaximumWidth(250)        # ⬅️ limit width
         self.combo.setMinimumWidth(120)
         self.combo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.layout.addStretch()
+        #self.layout.addStretch()
         self.layout.addWidget(self.combo)
 
         # --- Buttons ---
@@ -1148,8 +1164,8 @@ class ResolutionInput(QWidget):
         layout = QHBoxLayout(self)
         self.input_layout = QVBoxLayout()
 
-        self.input_layout.addLayout(self.width_label)
-        self.input_layout.addLayout(self.height_label)
+        self.input_layout.addWidget(self.width_label)
+        self.input_layout.addWidget(self.height_label)
 
         layout.addWidget(self.swap_button)
         layout.addLayout(self.input_layout)
@@ -1171,6 +1187,10 @@ class ScalingImageView(QGraphicsView):
         self.original_image = None
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setFrameShape(QGraphicsView.NoFrame)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
+        self.setMinimumWidth(0)
+
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
@@ -1195,6 +1215,10 @@ class ScalingImageView(QGraphicsView):
         super().resizeEvent(event)
         self.resize_image()  # Fit the image to the window size
 
+    def minimumSizeHint(self):
+        return QSize(0, 0)  # allow full shrink
+
+
 class SelectableMessageBox(QDialog):
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
@@ -1212,16 +1236,21 @@ class SelectableMessageBox(QDialog):
         layout.addWidget(ok_button)
 
 
-class SingleLineInputBox(QHBoxLayout):
-    def __init__(self, label, placeholder_text=None):
-        super().__init__()
-        self.label = QLabel(label)
+class SingleLineInputBox(QWidget):
+    def __init__(self, label_text, placeholder_text=None, parent=None):
+        super().__init__(parent)
+        self.label = QLabel(label_text, self)
+        self.input = QLineEdit(self)
+
         if placeholder_text:
-            self.input = QLineEdit(placeholderText=placeholder_text)
-        else:
-            self.input = QLineEdit()
-        self.addWidget(self.label)
-        self.addWidget(self.input)
+            self.input.setPlaceholderText(placeholder_text)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self.label)
+        layout.addWidget(self.input)
+        self.setFixedHeight(layout.sizeHint().height())
 
 class SquareButton(QPushButton):
     def __init__(self, text, font_size=16):  # Default font size

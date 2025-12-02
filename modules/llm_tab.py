@@ -29,7 +29,7 @@ class LlmTab(QWidget):
         main_layout = QHBoxLayout()
         chat_layout = QVBoxLayout()
         config_layout = QVBoxLayout()
-        config_layout.addStretch(1)
+        #config_layout.addStretch(1)
         main_layout.addLayout(chat_layout, stretch=3)
         main_layout.addLayout(config_layout)
         chat_layout.addWidget(self.history_viewer, stretch=5)

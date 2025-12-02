@@ -2,6 +2,7 @@ from typing import cast
 
 from PySide6.QtWidgets import  QCheckBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 from qasync import asyncSlot
+from PySide6.QtCore import Qt
 
 from modules.avernus_client import AvernusClient
 from modules.gallery import GalleryTab
@@ -52,17 +53,19 @@ class AuraFlowTab(QWidget):
         self.prompt_layout.addWidget(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)
         self.prompt_layout.addWidget(self.negative_prompt_label)
+        self.prompt_layout.setAlignment(Qt.AlignTop)
         self.config_layout.addWidget(self.prompt_enhance_checkbox)
         self.config_layout.addWidget(self.add_random_artist_checkbox)
         self.config_layout.addWidget(self.add_random_danbooru_tags_checkbox)
         self.config_layout.addWidget(self.danbooru_tags_slider)
         self.config_layout.addWidget(self.resolution_widget)
-        self.config_layout.addLayout(self.steps_label)
-        self.config_layout.addLayout(self.batch_size_label)
-        self.config_layout.addLayout(self.guidance_scale_label)
-        self.config_layout.addLayout(self.seed_label)
-        self.config_layout.addStretch()
+        self.config_layout.addWidget(self.steps_label)
+        self.config_layout.addWidget(self.batch_size_label)
+        self.config_layout.addWidget(self.guidance_scale_label)
+        self.config_layout.addWidget(self.seed_label)
+        #self.config_layout.addStretch()
         self.config_layout.addWidget(self.submit_button)
+        self.config_layout.setAlignment(Qt.AlignTop)
 
         self.main_layout.addLayout(self.prompt_layout)
         self.main_layout.addLayout(self.config_layout)

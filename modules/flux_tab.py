@@ -54,7 +54,7 @@ class FluxTab(QWidget):
         self.steps_label = SingleLineInputBox("Steps:", placeholder_text="30")
         self.batch_size_label = SingleLineInputBox("Batch Size:", placeholder_text="4")
         self.guidance_scale_label = SingleLineInputBox("Guidance Scale:", placeholder_text="3.5")
-        self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="1.0 Above 1.0 to enable negative prompts")
+        self.true_cfg_scale_label = SingleLineInputBox("True CFG Scale:", placeholder_text="1.0")
         self.seed_label = SingleLineInputBox("Seed", placeholder_text="42")
         self.i2i_image_label = ImageInputBox(self, "i2i", "assets/chili.png")
         self.i2i_strength_label = HorizontalSlider("Strength", 0, 100, 70, enable_ticks=False)
@@ -82,11 +82,11 @@ class FluxTab(QWidget):
         self.config_widgets_layout.addWidget(self.add_random_danbooru_tags_checkbox)
         self.config_widgets_layout.addWidget(self.danbooru_tags_slider)
         self.config_widgets_layout.addWidget(self.resolution_widget)
-        self.config_widgets_layout.addLayout(self.steps_label)
-        self.config_widgets_layout.addLayout(self.batch_size_label)
-        self.config_widgets_layout.addLayout(self.guidance_scale_label)
-        self.config_widgets_layout.addLayout(self.true_cfg_scale_label)
-        self.config_widgets_layout.addLayout(self.seed_label)
+        self.config_widgets_layout.addWidget(self.steps_label)
+        self.config_widgets_layout.addWidget(self.batch_size_label)
+        self.config_widgets_layout.addWidget(self.guidance_scale_label)
+        self.config_widgets_layout.addWidget(self.true_cfg_scale_label)
+        self.config_widgets_layout.addWidget(self.seed_label)
         self.config_widgets_layout.addWidget(self.submit_button)
 
         self.image_input_layout.addLayout(self.i2i_layout)
@@ -105,6 +105,11 @@ class FluxTab(QWidget):
         self.main_layout.addLayout(self.input_layout, stretch=5)
         self.main_layout.addLayout(self.config_widgets_layout, stretch=2)
         self.setLayout(self.main_layout)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(
+            QSizePolicy.Expanding,
+            QSizePolicy.Expanding
+        )
 
         self.setup_mutually_exclusive_checkboxes()
 
