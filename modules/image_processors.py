@@ -1,4 +1,3 @@
-import tempfile
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -152,9 +151,7 @@ class RealESRGANRequest(BaseImageRequest):
 
     async def generate(self):
         print("RealESRGAN:")
-        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.image.save(temp_file.name, quality=100)
-        base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
+        base64_input = image_to_base64(self.image, self.image.width(), self.image.height())
         try:
             response = await self.avernus_client.realesrgan(image=base64_input, scale=self.scale)
             if response["status"] == "True" or response["status"] == True:
@@ -183,9 +180,7 @@ class Swin2SRRequest(BaseImageRequest):
 
     async def generate(self):
         print("Swin2SR:")
-        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.image.save(temp_file.name, quality=100)
-        base64_input = image_to_base64(temp_file.name, self.image.width(), self.image.height())
+        base64_input = image_to_base64(self.image, self.image.width(), self.image.height())
         try:
             response = await self.avernus_client.swin2sr(image=base64_input)
             if response["status"] == "True" or response["status"] == True:

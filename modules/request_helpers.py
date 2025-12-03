@@ -1,4 +1,5 @@
 import asyncio
+import os
 import shutil
 import tempfile
 import time
@@ -60,10 +61,11 @@ class BaseAudioRequest:
         QApplication.processEvents()
 
     def load_audio_from_bytes(self, audio_bytes):
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as f:
-            f.write(audio_bytes)
-            f.flush()
-            return ClickableAudio(f.name, self.prompt, self.lyrics)
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        tmp.write(audio_bytes)
+        tmp.close()  # ✅ REQUIRED on Windows
+
+        return ClickableAudio(tmp.name, self.prompt, self.lyrics)
 
 class BaseImageRequest:
     def __init__(self,
@@ -319,8 +321,9 @@ class ClickableAudio(QGraphicsProxyWidget):
     def copy_mp3_to_clipboard(self):
         try:
             # Create a temporary MP3 file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_mp3:
-                mp3_path = tmp_mp3.name
+            tmp_mp3 = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+            tmp_mp3.close()
+            mp3_path = tmp_mp3.name
 
             # Convert WAV to MP3
             audio = AudioSegment.from_wav(self.audio_path)
@@ -342,6 +345,21 @@ class ClickableAudio(QGraphicsProxyWidget):
             print(f"Converted to MP3: {mp3_path}")
         except Exception as e:
             print(f"Failed to convert WAV to MP3: {e}")
+
+    def __del__(self):
+        try:
+            if os.path.exists(self.audio_path):
+                os.unlink(self.audio_path)
+        except Exception:
+            pass
+
+    def closeEvent(self, event):
+        try:
+            if os.path.exists(self.audio_path):
+                os.unlink(self.audio_path)
+        except Exception:
+            pass
+        super().closeEvent(event)
 
 
 class ClickablePixmap(QGraphicsPixmapItem):

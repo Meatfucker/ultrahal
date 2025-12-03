@@ -1,6 +1,6 @@
-import tempfile
 from typing import cast
 
+from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import  QCheckBox, QHBoxLayout, QListWidget, QPushButton, QSizePolicy, QVBoxLayout, QWidget
@@ -222,20 +222,16 @@ class FluxFillRequest(BaseImageRequest):
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
-        image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.image.save(image_temp_file.name, quality=100)
-        image = image_to_base64(image_temp_file.name, self.width, self.height)
+        image = image_to_base64(self.image, self.width, self.height)
         kwargs["image"] = str(image)
-        mask_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.mask_image.save(mask_temp_file.name, quality=100)
-        mask_image = image_to_base64(mask_temp_file.name, self.width, self.height)
+        mask_image = image_to_base64(self.mask_image, self.width, self.height)
         kwargs["mask_image"] = str(mask_image)
         kwargs["width"] = self.width
         kwargs["height"] = self.height
         kwargs["strength"] = self.strength
         if int(self.outpainting_pixels) > 0:
-            #pil_image = Image.open("image_temp.png")
-            #pil_mask_image = Image.open("mask_temp.png")
+            pil_image = Image.open("image_temp.png")
+            pil_mask_image = Image.open("mask_temp.png")
             #outpainting_image, outpainting_mask, new_width, new_height = await self.get_outpainting_images(int(self.outpainting_pixels),
             #                                                                                               self.outpainting_direction,
             #                                                                                               pil_image,
@@ -246,11 +242,12 @@ class FluxFillRequest(BaseImageRequest):
             #kwargs["height"] = new_height
             #outpainting_image.save("composited_temp.png", quality=100)
             #image = image_to_base64("composited_temp.png", new_width, new_height)
-            image = image_to_base64("test_image.png", 1024, 1024)
+
+            image = image_to_base64(pil_image, 1024, 1024)
             kwargs["image"] = str(image)
             #outpainting_mask.save("composited_mask_temp.png", quality=100)
             #mask_image = image_to_base64("composited_mask_temp.png", new_width, new_height)
-            mask_image = image_to_base64("test_mask.png", 1024, 1024)
+            mask_image = image_to_base64(pil_mask_image, 1024, 1024)
             kwargs["mask_image"] = str(mask_image)
 
         if self.enhance_prompt:

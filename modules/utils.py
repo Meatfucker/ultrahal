@@ -82,10 +82,8 @@ async def base64_to_images(base64_images):
         image_files.append(img_file)
     return image_files
 
-def image_to_base64(image_path, width, height):
-    image = Image.open(image_path)
-    image = image.convert("RGB")
-    image = image.resize((width, height))
+def image_to_base64(image, width, height):
+    image = image.convert("RGB").resize((width, height))
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")

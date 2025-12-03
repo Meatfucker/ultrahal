@@ -1,4 +1,3 @@
-import tempfile
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -238,9 +237,7 @@ class QwenEditPlusRequest(BaseImageRequest):
             kwargs["height"] = 1024
         kwargs["images"] = []
         for image in self.images:
-            image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-            image.save(image_temp_file.name, quality=100)
-            bas64_image = image_to_base64(image_temp_file.name, kwargs["width"], kwargs["height"])
+            bas64_image = image_to_base64(image, kwargs["width"], kwargs["height"])
             kwargs["images"].append(bas64_image)
 
         if self.enhance_prompt:

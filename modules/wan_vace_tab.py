@@ -1,4 +1,4 @@
-import tempfile
+
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -189,14 +189,10 @@ class WanVACERequest(BaseVideoRequest):
         kwargs["prompt"] = self.enhanced_prompt
 
         if self.first_frame_enabled:
-            first_frame_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-            self.first_frame.save(first_frame_temp_file.name, quality=100)
-            image = image_to_base64(first_frame_temp_file.name, kwargs["width"], kwargs["height"])
+            image = image_to_base64(self.first_frame, kwargs["width"], kwargs["height"])
             kwargs["first_frame"] = str(image)
         if self.last_frame_enabled:
-            last_frame_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-            self.last_frame.save(last_frame_temp_file.name, quality=100)
-            image = image_to_base64(last_frame_temp_file.name, kwargs["width"], kwargs["height"])
+            image = image_to_base64(self.last_frame, kwargs["width"], kwargs["height"])
             kwargs["last_frame"] = str(image)
         try:
             response = await self.avernus_client.wan_vace(**kwargs)

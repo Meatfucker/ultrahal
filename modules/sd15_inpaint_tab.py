@@ -1,4 +1,3 @@
-import tempfile
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -250,13 +249,9 @@ class SD15InpaintRequest(BaseImageRequest):
         if self.guidance_scale != "":kwargs["guidance_scale"] = float(self.guidance_scale)
         if self.seed != "": kwargs["seed"] = int(self.seed)
         if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
-        image_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.image.save(image_temp_file.name, quality=100)
-        image = image_to_base64(image_temp_file.name, self.width, self.height)
+        image = image_to_base64(self.image, self.width, self.height)
         kwargs["image"] = str(image)
-        mask_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-        self.mask_image.save(mask_temp_file.name, quality=100)
-        mask_image = image_to_base64(mask_temp_file.name, self.width, self.height)
+        mask_image = image_to_base64(self.mask_image, self.width, self.height)
         kwargs["mask_image"] = str(mask_image)
         kwargs["width"] = self.width
         kwargs["height"] = self.height

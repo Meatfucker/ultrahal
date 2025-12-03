@@ -1,4 +1,3 @@
-import tempfile
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -227,9 +226,7 @@ class Flux2Request(BaseImageRequest):
         if self.i2i_image_enabled:
             input_images = []
             for input_image in self.i2i_image:
-                i2i_temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".png")
-                input_image.save(i2i_temp_file.name, quality=100)
-                image = image_to_base64(i2i_temp_file.name, kwargs["width"], kwargs["height"])
+                image = image_to_base64(input_image.name, kwargs["width"], kwargs["height"])
                 input_images.append(str(image))
             kwargs["image"] = input_images
         if self.enhance_prompt:
