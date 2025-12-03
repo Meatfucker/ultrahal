@@ -226,7 +226,7 @@ class Flux2Request(BaseImageRequest):
         if self.i2i_image_enabled:
             input_images = []
             for input_image in self.i2i_image:
-                image = image_to_base64(input_image.name, kwargs["width"], kwargs["height"])
+                image = image_to_base64(input_image, kwargs["width"], kwargs["height"])
                 input_images.append(str(image))
             kwargs["image"] = input_images
         if self.enhance_prompt:
