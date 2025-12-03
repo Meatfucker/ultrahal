@@ -1047,8 +1047,8 @@ class PromptPickerWidget(QWidget):
         # --- Combo Box ---
         self.combo = CheckableComboBox()
         self.combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.combo.setMaximumWidth(250)        # ⬅️ limit width
-        self.combo.setMinimumWidth(120)
+        #self.combo.setMaximumWidth(250)        # ⬅️ limit width
+        #self.combo.setMinimumWidth(120)
         self.combo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         #self.layout.addStretch()
         self.layout.addWidget(self.combo)
@@ -1061,6 +1061,7 @@ class PromptPickerWidget(QWidget):
 
         self.layout.addWidget(self.add_button)
         self.layout.addWidget(self.remove_button)
+        self.layout.setAlignment(Qt.AlignRight)
 
         # Load data
         self.reload_list()

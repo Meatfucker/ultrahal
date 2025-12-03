@@ -54,7 +54,7 @@ class Kandinsky5Tab(QWidget):
         #input_layout.addStretch()
         input_layout.addWidget(self.submit_button)
 
-        main_layout.addLayout(prompt_layout)
+        main_layout.addLayout(prompt_layout, stretch=1)
         main_layout.addLayout(input_layout)
         self.setLayout(main_layout)
 

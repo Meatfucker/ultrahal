@@ -67,7 +67,7 @@ class ZImageTab(QWidget):
         self.config_layout.addWidget(self.submit_button)
         self.config_layout.setAlignment(Qt.AlignTop)
 
-        self.main_layout.addLayout(self.prompt_layout)
+        self.main_layout.addLayout(self.prompt_layout, stretch=1)
         self.main_layout.addLayout(self.config_layout)
         self.setLayout(self.main_layout)
 
