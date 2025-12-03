@@ -83,6 +83,9 @@ async def base64_to_images(base64_images):
     return image_files
 
 def image_to_base64(image, width, height):
+    if hasattr(image, "toImage"):  # QPixmap / QImage
+        image = qpixmap_to_pil(image)
+
     image = image.convert("RGB").resize((width, height))
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
@@ -157,3 +160,13 @@ async def get_enhanced_prompt(avernus_client, prompt, instructions=None):
     except Exception as e:
         print(f"ENHANCE PROMPT EXCEPTION: {e}")
         return prompt
+
+def qpixmap_to_pil(pixmap):
+    qimage = pixmap.toImage().convertToFormat(pixmap.toImage().Format.Format_RGBA8888)
+
+    width = qimage.width()
+    height = qimage.height()
+
+    buffer = qimage.bits().tobytes()
+
+    return Image.frombytes("RGBA",(width, height), buffer)
