@@ -193,6 +193,7 @@ class MainWindow(QWidget):
             await self.sdxl_tab.make_scheduler_list()
             await self.sd15_inpaint_tab.make_lora_list()
             await self.sd15_inpaint_tab.make_scheduler_list()
+            await self.zimage_tab.make_lora_list()
         except Exception as e:
             print(f"UPDATING LORA LISTS FAILED: {e}")
 

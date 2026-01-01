@@ -1,7 +1,7 @@
 from typing import cast
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import  QCheckBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import  QCheckBox, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QListWidget
 from qasync import asyncSlot
 
 from modules.avernus_client import AvernusClient
@@ -34,6 +34,19 @@ class ZImageTab(QWidget):
         self.negative_prompt_picker = PromptPickerWidget()
         self.negative_prompt_label = ParagraphInputBox("Negative Prompt")
         self.model_picker = ModelPickerWidget("zimage")
+        self.lora_list = QListWidget()
+        self.lora_list.setSelectionMode(QListWidget.MultiSelection)
+        self.lora_list.setStyleSheet("""
+                     QListWidget {
+                         border: none;
+                         background-color: #2c2c31;
+                         color: #ddd;
+                         font-size: 14px;
+                         border: 2px solid solid;
+                         border-color: #28282f;
+                         border-radius: 8px; /* rounded corners */
+                     }
+                 """)
         self.prompt_enhance_checkbox = QCheckBox("Enhance Prompt")
         self.add_random_artist_checkbox = QCheckBox("Add Random Artist")
         self.add_random_danbooru_tags_checkbox = QCheckBox("Add Random Danbooru Tags")
@@ -49,6 +62,7 @@ class ZImageTab(QWidget):
         self.config_layout = QVBoxLayout()
 
         self.config_layout.addWidget(self.model_picker)
+        self.config_layout.addWidget(self.lora_list)
         self.prompt_layout.addWidget(self.prompt_picker)
         self.prompt_layout.addWidget(self.prompt_label)
         self.prompt_layout.addWidget(self.negative_prompt_picker)
@@ -88,6 +102,12 @@ class ZImageTab(QWidget):
         guidance_scale = self.guidance_scale_label.input.text()
         seed = self.seed_label.input.text()
         model_name = self.model_picker.model_list_picker.currentText()
+        lora_items = self.lora_list.selectedItems()
+        lora_name = "<None>"
+        if lora_items:
+            lora_name = []
+            for lora_list_item in lora_items:
+                lora_name.append(lora_list_item.text())
         enhance_prompt = self.prompt_enhance_checkbox.isChecked()
         add_artist = self.add_random_artist_checkbox.isChecked()
         add_danbooru_tags = self.add_random_danbooru_tags_checkbox.isChecked()
@@ -109,6 +129,7 @@ class ZImageTab(QWidget):
                                      add_danbooru_tags=add_danbooru_tags,
                                      danbooru_tags_amount=danbooru_tags_amount,
                                      model_name=model_name,
+                                     lora_name=lora_name,
                                      seed=seed)
             queue_item = self.queue_view.add_queue_item(request, self.queue_view)
             request.ui_item = queue_item
@@ -116,6 +137,21 @@ class ZImageTab(QWidget):
             self.tabs.parent().request_event.set()
         except Exception as e:
             print(f"ZImage on_submit EXCEPTION: {e}")
+
+    @asyncSlot()
+    async def make_lora_list(self):
+        self.lora_list.clear()
+        try:
+            response = await self.avernus_client.list_zimage_loras()
+            if response["status"] is True:
+                if len(response["loras"]) == 0:
+                    self.lora_list.insertItems(0, ["NONE"])
+                else:
+                    self.lora_list.insertItems(0, response["loras"])
+            else:
+                self.lora_list.insertItems(0, ["NONE"])
+        except:
+            self.lora_list.insertItems(0, ["LORA LIST ERROR"])
 
 
 class ZImageRequest(BaseImageRequest):
@@ -135,7 +171,8 @@ class ZImageRequest(BaseImageRequest):
                  seed: str,
                  add_artist: bool,
                  add_danbooru_tags: bool,
-                 danbooru_tags_amount: int):
+                 danbooru_tags_amount: int,
+                 lora_name: list):
         super().__init__(avernus_client, gallery, tabs)
         self.prompt = prompt
         self.status = None
@@ -145,6 +182,7 @@ class ZImageRequest(BaseImageRequest):
         self.height = height
         self.steps = steps
         self.batch_size = batch_size
+        self.lora_name = lora_name
         self.guidance_scale = guidance_scale
         self.seed = seed
         self.model_name = model_name
@@ -173,6 +211,7 @@ class ZImageRequest(BaseImageRequest):
         kwargs["model_name"] = str(self.model_name)
         if self.width is not None: kwargs["width"] = int(self.width)
         if self.height is not None: kwargs["height"] = int(self.height)
+        if self.lora_name != "<None>": kwargs["lora_name"] = self.lora_name
 
         if self.enhance_prompt:
             llm_prompt = await get_enhanced_prompt(self.avernus_client, self.prompt)
